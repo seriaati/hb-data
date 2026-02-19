@@ -1,5 +1,5 @@
 [project]
-name = "hb-data"
+name = "hb_data"
 version = "0.1.0"
 description = "Package for getting data that Hoyo Buddy needs."
 readme = "README.md"
@@ -16,3 +16,6 @@ license = { file = "LICENSE" }
 [build-system]
 requires = ["uv_build>=0.10.0,<0.11.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
