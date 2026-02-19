@@ -91,24 +91,32 @@ class GIClient(BaseClient):
         file_name = file_path.stem
         self._data[file_name] = await self._read_json(file_path)
 
-    async def read_text_maps(self) -> None:
+    async def read_text_maps(self, *, langs: Iterable[Language] | None = None) -> None:
         async with asyncio.TaskGroup() as tg:
             for lang in Language:
+                if langs is not None and lang not in langs:
+                    continue
                 tg.create_task(self._read_text_map(lang))
 
     async def read_data(self) -> None:
         async with asyncio.TaskGroup() as tg:
-            for file_name in DATA_FILE_NAMES.values():
+            for file_name in DATA_FILE_NAMES:
                 file_path = self._get_file_path(DATA_URL / f"{file_name}.json")
                 tg.create_task(self._read_data(file_path))
 
-    async def download(self, *, langs: Iterable[Language] | None = None) -> None:
+    async def download(
+        self, *, langs: Iterable[Language] | None = None, force: bool = False
+    ) -> None:
         await self._download_files(
-            [TEXT_MAP_URL / file_name for file_name in self._get_text_map_file_names(langs=langs)]
+            [TEXT_MAP_URL / file_name for file_name in self._get_text_map_file_names(langs=langs)],
+            force=force,
         )
+        await self.read_text_maps(langs=langs)
+
         await self._download_files(
-            [DATA_URL / f"{file_name}.json" for file_name in DATA_FILE_NAMES.values()]
+            [DATA_URL / f"{file_name}.json" for file_name in DATA_FILE_NAMES], force=force
         )
+        await self.read_data()
 
     def translate(self, text_map_hash: str, *, lang: Language) -> str:
         return self._text_maps.get(lang, {}).get(text_map_hash, text_map_hash)

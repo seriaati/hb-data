@@ -66,10 +66,13 @@ class BaseClient:
                 async for chunk in resp.content.iter_chunked(1024):
                     await f.write(chunk)
 
-    async def _download_files(self, urls: Sequence[URL]) -> None:
+    async def _download_files(self, urls: Sequence[URL], *, force: bool = False) -> None:
         async with asyncio.TaskGroup() as tg:
             for url in urls:
                 file_path = self._get_file_path(url)
+                if not force and await aiofiles.os.path.exists(file_path):
+                    logger.debug(f"File {file_path} already exists, skipping download.")
+                    continue
                 tg.create_task(self._download_file(url, file_path))
 
     async def _read_json(self, file_path: PathLike) -> dict:
