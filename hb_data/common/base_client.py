@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
@@ -59,12 +60,21 @@ class BaseClient:
         return self._data_dir / self._create_filename_from_url(url)
 
     async def _download_file(self, url: URL, file_path: PathLike) -> None:
+        file_path = Path(file_path)
         async with self.session.get(url) as resp:
             logger.debug(f"Downloading {url} to {file_path}...")
             resp.raise_for_status()
-            async with aiofiles.open(file_path, "wb") as f:
-                async for chunk in resp.content.iter_chunked(1024):
-                    await f.write(chunk)
+
+            _tmp_fd, tmp_path = tempfile.mkstemp(dir=file_path.parent)
+            try:
+                async with aiofiles.open(file_path, "wb") as f:
+                    async for chunk in resp.content.iter_chunked(1024):
+                        await f.write(chunk)
+                await aiofiles.os.rename(tmp_path, file_path)
+            except Exception as e:
+                logger.error(f"Failed to download {url}: {e}")
+                if await aiofiles.os.path.exists(tmp_path):
+                    await aiofiles.os.remove(tmp_path)
 
     async def _download_files(self, urls: Sequence[URL], *, force: bool = False) -> None:
         async with asyncio.TaskGroup() as tg:
