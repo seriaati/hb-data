@@ -8,7 +8,7 @@ from loguru import logger
 from yarl import URL
 
 from hb_data.common.base_client import BaseClient
-from hb_data.gi.models.mw_costume import MWCostume
+from hb_data.gi import models
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -38,7 +38,10 @@ HAS_TWO_PARTS = (Language.RU, Language.TH)
 BASE_URL = URL("https://gitlab.com/Dimbreath/AnimeGameData/-/raw/master")
 TEXT_MAP_URL = BASE_URL / "TextMap"
 DATA_URL = BASE_URL / "ExcelBinOutput"
-DATA_FILE_NAMES = {"mw_costumes": "BeyondCostumeExcelConfigData"}
+DATA_FILE_NAMES = (
+    "BeyondCostumeExcelConfigData",  # MW costumes
+    "BydMaterialExcelConfigData",  # MW items
+)
 
 
 class GIClient(BaseClient):
@@ -110,11 +113,21 @@ class GIClient(BaseClient):
     def translate(self, text_map_hash: str, *, lang: Language) -> str:
         return self._text_maps.get(lang, {}).get(text_map_hash, text_map_hash)
 
-    def get_mw_costumes(self, *, lang: Language = Language.EN) -> list[MWCostume]:
-        result: list[MWCostume] = []
+    def get_mw_costumes(self, *, lang: Language = Language.EN) -> list[models.MWCostume]:
+        result: list[models.MWCostume] = []
         data: list[dict[str, Any]] = self._data["BeyondCostumeExcelConfigData"]
         for item in data:
-            costume = MWCostume.model_validate(item)
+            costume = models.MWCostume.model_validate(item)
             costume.name = self.translate(costume.name, lang=lang)
             result.append(costume)
+        return result
+
+    def get_mw_items(self, *, lang: Language = Language.EN) -> list[models.MWItem]:
+        result: list[models.MWItem] = []
+        data: list[dict[str, Any]] = self._data["BydMaterialExcelConfigData"]
+        for item in data:
+            mw_item = models.MWItem.model_validate(item)
+            mw_item.name = self.translate(mw_item.name, lang=lang)
+            mw_item.description = self.translate(mw_item.description, lang=lang)
+            result.append(mw_item)
         return result
