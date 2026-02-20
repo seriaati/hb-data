@@ -1,0 +1,130 @@
+from __future__ import annotations
+
+import asyncio
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any, Self
+
+from loguru import logger
+from pydantic import ValidationError
+from yarl import URL
+
+from hb_data.common.base_client import BaseClient
+from hb_data.common.dict_utils import merge_dicts_by_key
+from hb_data.zzz import models
+from hb_data.zzz.deob import AvatarBaseTemplateTbDeobfuscator, AvatarBattleTemplateTbDeobfuscator
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+    from pathlib import Path
+
+
+class Language(StrEnum):
+    CHT = "CHT"
+    CHS = "CHS"
+    DE = "DE"
+    EN = "EN"
+    ES = "ES"
+    FR = "FR"
+    ID = "ID"
+    JA = "JA"
+    KO = "KO"
+    PT = "PT"
+    RU = "RU"
+    TH = "TH"
+    VI = "VI"
+
+
+BASE_URL = URL("https://git.mero.moe/dimbreath/ZenlessData/raw/branch/master")
+TEXT_MAP_URL = BASE_URL / "TextMap"
+DATA_URL = BASE_URL / "FileCfg"
+DATA_FILE_NAMES = (
+    "AvatarBaseTemplateTb",  # Characters
+    "AvatarBattleTemplateTb",  # Character battle properties
+)
+
+
+class ZZZClient(BaseClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self._text_maps: dict[Language, dict[str, str]] = {}
+        self._data: dict[str, Any] = {}
+        self._data_dir /= "zzz"
+
+    async def __aenter__(self) -> Self:
+        await super().__aenter__()
+        await self.read_text_maps()
+        await self.read_data()
+        return self
+
+    def _get_text_map_file_name(self, lang: Language) -> str:
+        if lang is Language.CHT:
+            return "TextMapTemplateTb.json"
+        return f"TextMap_{lang.value}TemplateTb.json"
+
+    def _get_text_map_file_names(self, *, langs: Iterable[Language] | None = None) -> list[str]:
+        file_names = []
+        for lang in Language:
+            if langs is not None and lang not in langs:
+                continue
+            file_names.append(self._get_text_map_file_name(lang))
+        return file_names
+
+    async def _read_text_map(self, lang: Language) -> None:
+        logger.debug(f"Reading text map for language: {lang}")
+        file_name = self._get_text_map_file_name(lang)
+        file_path = self._get_file_path(TEXT_MAP_URL / file_name)
+        self._text_maps[lang] = await self._read_json(file_path)
+
+    async def _read_data(self, file_path: Path) -> None:
+        file_name = file_path.stem
+        self._data[file_name] = await self._read_json(file_path)
+
+    async def read_text_maps(self, *, langs: Iterable[Language] | None = None) -> None:
+        async with asyncio.TaskGroup() as tg:
+            for lang in Language:
+                if langs is not None and lang not in langs:
+                    continue
+                tg.create_task(self._read_text_map(lang))
+
+    async def read_data(self) -> None:
+        async with asyncio.TaskGroup() as tg:
+            for file_name in DATA_FILE_NAMES:
+                file_path = self._get_file_path(DATA_URL / f"{file_name}.json")
+                tg.create_task(self._read_data(file_path))
+
+    async def download(
+        self, *, langs: Iterable[Language] | None = None, force: bool = False
+    ) -> None:
+        await self._download_files(
+            [TEXT_MAP_URL / file_name for file_name in self._get_text_map_file_names(langs=langs)],
+            force=force,
+        )
+        await self.read_text_maps(langs=langs)
+
+        await self._download_files(
+            [DATA_URL / f"{file_name}.json" for file_name in DATA_FILE_NAMES], force=force
+        )
+        await self.read_data()
+
+    def translate(self, text_map_hash: str, *, lang: Language) -> str:
+        return self._text_maps.get(lang, {}).get(text_map_hash, text_map_hash)
+
+    def get_characters(self, *, lang: Language = Language.EN) -> list[models.Character]:
+        result: list[models.Character] = []
+
+        d_avatar_base = AvatarBaseTemplateTbDeobfuscator(self._data["AvatarBaseTemplateTb"])
+        avatar_base = d_avatar_base.deobfuscate()
+        d_avatar_battle = AvatarBattleTemplateTbDeobfuscator(self._data["AvatarBattleTemplateTb"])
+        avatar_battle = d_avatar_battle.deobfuscate()
+        avatar_base = merge_dicts_by_key([avatar_base, avatar_battle], key="ID")
+
+        for item in avatar_base:
+            try:
+                character = models.Character.model_validate(item)
+            except ValidationError:
+                continue
+
+            character.name = self.translate(character.name, lang=lang)
+            result.append(character)
+
+        return result
