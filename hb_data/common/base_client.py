@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import tempfile
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
@@ -61,20 +61,34 @@ class BaseClient:
 
     async def _download_file(self, url: URL, file_path: PathLike) -> None:
         file_path = Path(file_path)
-        async with self.session.get(url) as resp:
-            logger.debug(f"Downloading {url} to {file_path}...")
-            resp.raise_for_status()
 
-            _tmp_fd, tmp_path = tempfile.mkstemp(dir=file_path.parent)
-            try:
-                async with aiofiles.open(file_path, "wb") as f:
+        await asyncio.to_thread(file_path.parent.mkdir, parents=True, exist_ok=True)
+
+        temp_filename = f".tmp_{uuid.uuid4().hex}_{file_path.name}"
+        temp_path = file_path.parent / temp_filename
+
+        try:
+            logger.debug(f"Downloading {url} to {file_path}...")
+
+            async with self.session.get(url) as resp:
+                resp.raise_for_status()
+
+                async with aiofiles.open(temp_path, mode="wb") as f:
                     async for chunk in resp.content.iter_chunked(1024):
                         await f.write(chunk)
-                await aiofiles.os.rename(tmp_path, file_path)
-            except Exception as e:
-                logger.error(f"Failed to download {url}: {e}")
-                if await aiofiles.os.path.exists(tmp_path):
-                    await aiofiles.os.remove(tmp_path)
+
+            await aiofiles.os.replace(temp_path, file_path)
+
+        except Exception as e:
+            logger.error(f"Failed to download {url}: {e}")
+            raise
+
+        finally:
+            if await aiofiles.os.path.exists(temp_path):
+                try:
+                    await aiofiles.os.remove(temp_path)
+                except Exception as e:
+                    logger.error(f"Failed to remove temporary file {temp_path}: {e}")
 
     async def _download_files(self, urls: Sequence[URL], *, force: bool = False) -> None:
         async with asyncio.TaskGroup() as tg:
