@@ -4,7 +4,7 @@ import enum
 
 from pydantic import BaseModel, Field, field_validator
 
-__all__ = ("Character",)
+__all__ = ("Character", "ElementType", "Specialty")
 
 
 class ElementType(enum.IntEnum):

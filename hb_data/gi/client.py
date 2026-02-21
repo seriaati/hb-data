@@ -53,6 +53,7 @@ class GIClient(BaseClient):
 
     async def __aenter__(self) -> Self:
         await super().__aenter__()
+        await self.download()
         await self.read_text_maps()
         await self.read_data()
         return self

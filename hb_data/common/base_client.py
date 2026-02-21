@@ -71,7 +71,9 @@ class BaseClient:
             logger.debug(f"Downloading {url} to {file_path}...")
 
             async with self.session.get(url) as resp:
-                resp.raise_for_status()
+                if resp.status != 200:
+                    logger.error(f"Failed to download {url}: HTTP {resp.status}")
+                    return
 
                 async with aiofiles.open(temp_path, mode="wb") as f:
                     async for chunk in resp.content.iter_chunked(1024):

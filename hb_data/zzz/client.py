@@ -11,7 +11,12 @@ from yarl import URL
 from hb_data.common.base_client import BaseClient
 from hb_data.common.dict_utils import merge_dicts_by_key
 from hb_data.zzz import models
-from hb_data.zzz.deob import AvatarBaseTemplateTbDeobfuscator, AvatarBattleTemplateTbDeobfuscator
+from hb_data.zzz.deob import (
+    AvatarBaseTemplateTbDeobfuscator,
+    AvatarBattleTemplateTbDeobfuscator,
+    ItemTemplateTbDeobfuscator,
+    WeaponTemplateTbDeobfuscator,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -40,6 +45,8 @@ DATA_URL = BASE_URL / "FileCfg"
 DATA_FILE_NAMES = (
     "AvatarBaseTemplateTb",  # Characters
     "AvatarBattleTemplateTb",  # Character battle properties
+    "WeaponTemplateTb",  # Weapons
+    "ItemTemplateTb",  # Items
 )
 
 
@@ -52,12 +59,11 @@ class ZZZClient(BaseClient):
 
     async def __aenter__(self) -> Self:
         await super().__aenter__()
-        await self.read_text_maps()
-        await self.read_data()
+        await self.download()
         return self
 
     def _get_text_map_file_name(self, lang: Language) -> str:
-        if lang is Language.CHT:
+        if lang is Language.CHS:
             return "TextMapTemplateTb.json"
         return f"TextMap_{lang.value}TemplateTb.json"
 
@@ -126,5 +132,25 @@ class ZZZClient(BaseClient):
 
             character.name = self.translate(character.name, lang=lang)
             result.append(character)
+
+        return result
+
+    def get_weapons(self, *, lang: Language = Language.EN) -> list[models.Weapon]:
+        result: list[models.Weapon] = []
+
+        d_weapon = WeaponTemplateTbDeobfuscator(self._data["WeaponTemplateTb"])
+        weapon_data = d_weapon.deobfuscate()
+        d_item = ItemTemplateTbDeobfuscator(self._data["ItemTemplateTb"])
+        item_data = d_item.deobfuscate()
+        weapon_data = merge_dicts_by_key([weapon_data, item_data], key="ItemID")
+
+        for item in weapon_data:
+            try:
+                weapon = models.Weapon.model_validate(item)
+            except ValidationError:
+                continue
+
+            weapon.name = self.translate(weapon.name, lang=lang)
+            result.append(weapon)
 
         return result

@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from hb_data.common.base_deob import BaseDeobfuscator, DeobfuscatedField, find_key_by_value
+from hb_data.common.base_deob import (
+    BaseDeobfuscator,
+    DeobfuscatedField,
+    find_key_by_position,
+    find_key_by_value,
+)
 
 
 class AvatarBaseTemplateTbDeobfuscator(BaseDeobfuscator):
@@ -17,3 +22,12 @@ class AvatarBattleTemplateTbDeobfuscator(BaseDeobfuscator):
     id = DeobfuscatedField("ID", lambda data: find_key_by_value(data, 1011))
     elements = DeobfuscatedField("Elements", lambda data: find_key_by_value(data, [203]))
     specialty = DeobfuscatedField("Specialty", lambda data: find_key_by_value(data, 2))
+
+
+class WeaponTemplateTbDeobfuscator(BaseDeobfuscator):
+    item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_value(data, 12001))
+
+
+class ItemTemplateTbDeobfuscator(BaseDeobfuscator):
+    item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_position(data, 0))
+    name = DeobfuscatedField("Name", lambda data: find_key_by_value(data, "Item_Coin"))

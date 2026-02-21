@@ -11,6 +11,10 @@ def find_key_by_value(data: dict, value: Any) -> str:
     return next(k for k, v in data.items() if v == value)
 
 
+def find_key_by_position(data: dict, position: int) -> str:
+    return list(data.keys())[position]
+
+
 @dataclass
 class DeobfuscatedField:
     name: str
