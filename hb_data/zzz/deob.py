@@ -60,3 +60,8 @@ class EquipmentSuitTemplateTbDeobfuscator(BaseDeobfuscator):
     suit_story = DeobfuscatedField(
         "SuitStory", lambda data: find_key_by_value(data, "EquipmentSuit_31000_story")
     )
+
+
+class BuddyBaseTemplateTbDeobfuscator(BaseDeobfuscator):
+    id = DeobfuscatedField("ID", lambda data: find_key_by_value(data, 50001))
+    name = DeobfuscatedField("Name", lambda data: find_key_by_value(data, "Bangboo_Name_en_50001"))

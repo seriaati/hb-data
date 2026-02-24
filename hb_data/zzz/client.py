@@ -44,6 +44,7 @@ DATA_FILE_NAMES = (
     "ItemTemplateTb",  # Items
     "EquipmentTemplateTb",  # Drive discs
     "EquipmentSuitTemplateTb",  # Drive disc sets
+    "BuddyBaseTemplateTb",  # Bangboos
 )
 
 
@@ -198,5 +199,21 @@ class ZZZClient(BaseClient):
             )
             drive_disc_set.story = self.translate(drive_disc_set.story, lang=lang)
             result.append(drive_disc_set)
+
+        return result
+
+    def get_bangboos(self, *, lang: Language = Language.EN) -> list[models.Bangboo]:
+        result: list[models.Bangboo] = []
+        d_buddy = deob.BuddyBaseTemplateTbDeobfuscator(self._data["BuddyBaseTemplateTb"])
+        buddy_data = d_buddy.deobfuscate()
+
+        for item in buddy_data:
+            try:
+                bangboo = models.Bangboo.model_validate(item)
+            except ValidationError:
+                continue
+
+            bangboo.name = self.translate(bangboo.name, lang=lang)
+            result.append(bangboo)
 
         return result
