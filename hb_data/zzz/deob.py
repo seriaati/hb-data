@@ -22,6 +22,13 @@ class AvatarBattleTemplateTbDeobfuscator(BaseDeobfuscator):
     specialty = DeobfuscatedField("AvatarSpecialty", lambda data: find_key_by_value(data, 2))
 
 
+class AvatarUITemplateTbDeobfuscator(BaseDeobfuscator):
+    id = DeobfuscatedField("ID", lambda data: find_key_by_value(data, 1011))
+    camp_name = DeobfuscatedField(
+        "CampName", lambda data: find_key_by_value(data, "CampGentleHouse")
+    )
+
+
 class WeaponTemplateTbDeobfuscator(BaseDeobfuscator):
     item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_value(data, 12001))
     specialty = DeobfuscatedField("WeaponSpecialty", lambda data: find_key_by_position(data, 13))

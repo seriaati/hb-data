@@ -12,6 +12,7 @@ class Character(BaseModel):
     element: ElementType = Field(alias="Elements")
     specialty: Specialty = Field(alias="AvatarSpecialty")
     rarity: int = Field(alias="Rarity")
+    faction_name: str = Field(alias="CampName")
 
     @property
     def icon(self) -> str:

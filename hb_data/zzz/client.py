@@ -39,6 +39,7 @@ DATA_URL = BASE_URL / "FileCfg"
 DATA_FILE_NAMES = (
     "AvatarBaseTemplateTb",  # Characters
     "AvatarBattleTemplateTb",  # Character battle properties
+    "AvatarUITemplateTb",  # Character properties in UI
     "WeaponTemplateTb",  # Weapons
     "ItemTemplateTb",  # Items
     "EquipmentTemplateTb",  # Drive discs
@@ -122,10 +123,13 @@ class ZZZClient(BaseClient):
         )
         avatar_battle = d_avatar_battle.deobfuscate()
 
+        d_avatar_ui = deob.AvatarUITemplateTbDeobfuscator(self._data["AvatarUITemplateTb"])
+        avatar_ui = d_avatar_ui.deobfuscate()
+
         d_item = deob.ItemTemplateTbDeobfuscator(self._data["ItemTemplateTb"])
         item_data = d_item.deobfuscate()
 
-        avatar_base = merge_dicts_by_key([avatar_base, avatar_battle], key="ID")
+        avatar_base = merge_dicts_by_key([avatar_base, avatar_battle, avatar_ui], key="ID")
         avatar_base = merge_dicts_by_different_keys({"ID": avatar_base, "ItemID": item_data})
 
         for item in avatar_base:
@@ -136,6 +140,7 @@ class ZZZClient(BaseClient):
 
             character.name = self.translate(character.name, lang=lang)
             character.full_name = self.translate(character.full_name, lang=lang)
+            character.faction_name = self.translate(character.faction_name, lang=lang)
             result.append(character)
 
         return result
