@@ -41,19 +41,9 @@ class BaseClient:
 
     async def start(self) -> None:
         self._session = aiohttp.ClientSession()
-        await self._create_data_dir()
 
     async def close(self) -> None:
         await self.session.close()
-
-    async def _create_data_dir(self) -> None:
-        if not await aiofiles.os.path.exists(self._data_dir):
-            await aiofiles.os.mkdir(self._data_dir)
-
-            # Create .gitignore file with *
-            gitignore_path = self._data_dir / ".gitignore"
-            async with aiofiles.open(gitignore_path, "w") as f:
-                await f.write("*\n")
 
     def _create_filename_from_url(self, url: URL) -> str:
         return url.parts[-1]
