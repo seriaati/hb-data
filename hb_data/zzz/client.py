@@ -10,13 +10,7 @@ from yarl import URL
 
 from hb_data.common.base_client import BaseClient
 from hb_data.common.dict_utils import merge_dicts_by_key
-from hb_data.zzz import models
-from hb_data.zzz.deob import (
-    AvatarBaseTemplateTbDeobfuscator,
-    AvatarBattleTemplateTbDeobfuscator,
-    ItemTemplateTbDeobfuscator,
-    WeaponTemplateTbDeobfuscator,
-)
+from hb_data.zzz import deob, models
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -47,6 +41,8 @@ DATA_FILE_NAMES = (
     "AvatarBattleTemplateTb",  # Character battle properties
     "WeaponTemplateTb",  # Weapons
     "ItemTemplateTb",  # Items
+    "EquipmentTemplateTb",  # Drive discs
+    "EquipmentSuitTemplateTb",  # Drive disc sets
 )
 
 
@@ -118,9 +114,11 @@ class ZZZClient(BaseClient):
     def get_characters(self, *, lang: Language = Language.EN) -> list[models.Character]:
         result: list[models.Character] = []
 
-        d_avatar_base = AvatarBaseTemplateTbDeobfuscator(self._data["AvatarBaseTemplateTb"])
+        d_avatar_base = deob.AvatarBaseTemplateTbDeobfuscator(self._data["AvatarBaseTemplateTb"])
         avatar_base = d_avatar_base.deobfuscate()
-        d_avatar_battle = AvatarBattleTemplateTbDeobfuscator(self._data["AvatarBattleTemplateTb"])
+        d_avatar_battle = deob.AvatarBattleTemplateTbDeobfuscator(
+            self._data["AvatarBattleTemplateTb"]
+        )
         avatar_battle = d_avatar_battle.deobfuscate()
         avatar_base = merge_dicts_by_key([avatar_base, avatar_battle], key="ID")
 
@@ -138,9 +136,9 @@ class ZZZClient(BaseClient):
     def get_weapons(self, *, lang: Language = Language.EN) -> list[models.Weapon]:
         result: list[models.Weapon] = []
 
-        d_weapon = WeaponTemplateTbDeobfuscator(self._data["WeaponTemplateTb"])
+        d_weapon = deob.WeaponTemplateTbDeobfuscator(self._data["WeaponTemplateTb"])
         weapon_data = d_weapon.deobfuscate()
-        d_item = ItemTemplateTbDeobfuscator(self._data["ItemTemplateTb"])
+        d_item = deob.ItemTemplateTbDeobfuscator(self._data["ItemTemplateTb"])
         item_data = d_item.deobfuscate()
         weapon_data = merge_dicts_by_key([weapon_data, item_data], key="ItemID")
 
