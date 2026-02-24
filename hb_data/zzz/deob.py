@@ -31,3 +31,25 @@ class WeaponTemplateTbDeobfuscator(BaseDeobfuscator):
 class ItemTemplateTbDeobfuscator(BaseDeobfuscator):
     item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_position(data, 0))
     name = DeobfuscatedField("Name", lambda data: find_key_by_value(data, "Item_Coin"))
+
+
+class EquipmentTemplateTbDeobfuscator(BaseDeobfuscator):
+    item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_value(data, 31021))
+    position = DeobfuscatedField("Position", lambda data: find_key_by_value(data, 1))
+    suit_id = DeobfuscatedField("SuitID", lambda data: find_key_by_value(data, 31000))
+
+
+class EquipmentSuitTemplateTbDeobfuscator(BaseDeobfuscator):
+    id = DeobfuscatedField("ID", lambda data: find_key_by_value(data, 31000))
+    name = DeobfuscatedField(
+        "Name", lambda data: find_key_by_value(data, "EquipmentSuit_31000_name")
+    )
+    two_set_effect = DeobfuscatedField(
+        "TwoSetEffect", lambda data: find_key_by_value(data, "EquipmentSuit_31000_2_des")
+    )
+    four_set_effect = DeobfuscatedField(
+        "FourSetEffect", lambda data: find_key_by_value(data, "EquipmentSuit_31000_4_des")
+    )
+    suit_story = DeobfuscatedField(
+        "SuitStory", lambda data: find_key_by_value(data, "EquipmentSuit_31000_story")
+    )

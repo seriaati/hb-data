@@ -154,3 +154,39 @@ class ZZZClient(BaseClient):
             result.append(weapon)
 
         return result
+
+    def get_drive_discs(self, *, lang: Language = Language.EN) -> list[models.DriveDisc]:  # noqa: ARG002
+        result: list[models.DriveDisc] = []
+        d_equipment = deob.EquipmentTemplateTbDeobfuscator(self._data["EquipmentTemplateTb"])
+        equipment_data = d_equipment.deobfuscate()
+
+        for item in equipment_data:
+            try:
+                drive_disc = models.DriveDisc.model_validate(item)
+            except ValidationError:
+                continue
+
+            result.append(drive_disc)
+
+        return result
+
+    def get_drive_disc_sets(self, *, lang: Language = Language.EN) -> list[models.DriveDiscSet]:
+        result: list[models.DriveDiscSet] = []
+        d_suit = deob.EquipmentSuitTemplateTbDeobfuscator(self._data["EquipmentSuitTemplateTb"])
+        suit_data = d_suit.deobfuscate()
+
+        for item in suit_data:
+            try:
+                drive_disc_set = models.DriveDiscSet.model_validate(item)
+            except ValidationError:
+                continue
+
+            drive_disc_set.name = self.translate(drive_disc_set.name, lang=lang)
+            drive_disc_set.two_set_effect = self.translate(drive_disc_set.two_set_effect, lang=lang)
+            drive_disc_set.four_set_effect = self.translate(
+                drive_disc_set.four_set_effect, lang=lang
+            )
+            drive_disc_set.story = self.translate(drive_disc_set.story, lang=lang)
+            result.append(drive_disc_set)
+
+        return result
