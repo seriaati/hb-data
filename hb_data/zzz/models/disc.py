@@ -10,7 +10,7 @@ class DriveDisc(BaseModel):
 
     @property
     def icon(self) -> str:
-        return f"https://zzz.honeyhunterworld.com/img/item/{self.id}-item_icon_35.webp"
+        return f"https://zzz.honeyhunterworld.com/img/item/{self.id}-item_icon.webp"
 
 
 class DriveDiscSet(BaseModel):

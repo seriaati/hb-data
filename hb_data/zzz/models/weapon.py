@@ -9,4 +9,4 @@ class Weapon(BaseModel):
 
     @property
     def icon(self) -> str:
-        return f"https://zzz.honeyhunterworld.com/img/item/{self.id}-weapon_data_icon_35.webp"
+        return f"https://zzz.honeyhunterworld.com/img/item/{self.id}-weapon_data_icon.webp"
