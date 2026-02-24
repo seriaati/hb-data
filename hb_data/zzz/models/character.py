@@ -4,7 +4,21 @@ from pydantic import BaseModel, Field, field_validator
 
 from .enums import ElementType, Specialty
 
-__all__ = ("Character",)
+__all__ = ("Character", "CharacterSkin")
+
+
+class CharacterSkin(BaseModel):
+    id: int = Field(alias="SkinID")
+    character_id: int = Field(alias="AvatarID")
+    name: str = Field(alias="SkinName")
+    description: str = Field(alias="SkinDesc")
+    image: str = Field(alias="SkinImage")
+    tags: list[str] = Field(alias="SkinTags")
+
+    @field_validator("image", mode="after")
+    @classmethod
+    def __convert_image(cls, v: str) -> str:
+        return f"https://enka.network/ui/zzz/{v}.png"
 
 
 class Character(BaseModel):
@@ -15,6 +29,7 @@ class Character(BaseModel):
     specialty: Specialty = Field(alias="AvatarSpecialty")
     rarity: int = Field(alias="Rarity")
     faction_name: str = Field(alias="CampName")
+    skins: list[CharacterSkin] = Field(default_factory=list)
 
     @property
     def icon(self) -> str:

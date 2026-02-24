@@ -40,6 +40,7 @@ DATA_FILE_NAMES = (
     "AvatarBaseTemplateTb",  # Characters
     "AvatarBattleTemplateTb",  # Character battle properties
     "AvatarUITemplateTb",  # Character properties in UI
+    "AvatarSkinBaseTemplateTb",  # Character skins
     "WeaponTemplateTb",  # Weapons
     "ItemTemplateTb",  # Items
     "EquipmentTemplateTb",  # Drive discs
@@ -133,6 +134,10 @@ class ZZZClient(BaseClient):
         avatar_base = merge_dicts_by_key([avatar_base, avatar_battle, avatar_ui], key="ID")
         avatar_base = merge_dicts_by_different_keys({"ID": avatar_base, "ItemID": item_data})
 
+        d_skin = deob.AvatarSkinBaseTemplateTbDeobfuscator(self._data["AvatarSkinBaseTemplateTb"])
+        skin_data = d_skin.deobfuscate()
+        skins = [models.CharacterSkin.model_validate(skin) for skin in skin_data]
+
         for item in avatar_base:
             try:
                 character = models.Character.model_validate(item)
@@ -142,6 +147,11 @@ class ZZZClient(BaseClient):
             character.name = self.translate(character.name, lang=lang)
             character.full_name = self.translate(character.full_name, lang=lang)
             character.faction_name = self.translate(character.faction_name, lang=lang)
+            character.skins = [
+                skin
+                for skin in skins
+                if skin.character_id == character.id and "DefaultSkin" not in skin.tags
+            ]
             result.append(character)
 
         return result

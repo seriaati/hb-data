@@ -29,6 +29,19 @@ class AvatarUITemplateTbDeobfuscator(BaseDeobfuscator):
     )
 
 
+class AvatarSkinBaseTemplateTbDeobfuscator(BaseDeobfuscator):
+    skin_id = DeobfuscatedField("SkinID", lambda data: find_key_by_value(data, 3110110))
+    avatar_id = DeobfuscatedField("AvatarID", lambda data: find_key_by_value(data, 1011))
+    skin_name = DeobfuscatedField(
+        "SkinName", lambda data: find_key_by_value(data, "AvatarSkin_Anbi_Name_000")
+    )
+    skin_desc = DeobfuscatedField(
+        "SkinDesc", lambda data: find_key_by_value(data, "AvatarSkin_Anbi_Desc_000")
+    )
+    skin_image = DeobfuscatedField("SkinImage", lambda data: find_key_by_value(data, "IconRole01"))
+    skin_tags = DeobfuscatedField("SkinTags", lambda data: find_key_by_value(data, ["DefaultSkin"]))
+
+
 class WeaponTemplateTbDeobfuscator(BaseDeobfuscator):
     item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_value(data, 12001))
     specialty = DeobfuscatedField("WeaponSpecialty", lambda data: find_key_by_position(data, 13))
