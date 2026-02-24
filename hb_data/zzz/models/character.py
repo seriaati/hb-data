@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 from .enums import ElementType, Specialty
@@ -17,6 +19,10 @@ class Character(BaseModel):
     @property
     def icon(self) -> str:
         return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_icon.webp"
+
+    @property
+    def rarity_str(self) -> Literal["A", "S"]:
+        return ("C", "B", "A", "S")[self.rarity - 1]  # pyright: ignore[reportReturnType]
 
     @field_validator("element", mode="before")
     @classmethod
