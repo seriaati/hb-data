@@ -19,16 +19,18 @@ class AvatarBaseTemplateTbDeobfuscator(BaseDeobfuscator):
 class AvatarBattleTemplateTbDeobfuscator(BaseDeobfuscator):
     id = DeobfuscatedField("ID", lambda data: find_key_by_value(data, 1011))
     elements = DeobfuscatedField("Elements", lambda data: find_key_by_value(data, [203]))
-    specialty = DeobfuscatedField("Specialty", lambda data: find_key_by_value(data, 2))
+    specialty = DeobfuscatedField("AvatarSpecialty", lambda data: find_key_by_value(data, 2))
 
 
 class WeaponTemplateTbDeobfuscator(BaseDeobfuscator):
     item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_value(data, 12001))
+    specialty = DeobfuscatedField("WeaponSpecialty", lambda data: find_key_by_position(data, 13))
 
 
 class ItemTemplateTbDeobfuscator(BaseDeobfuscator):
     item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_position(data, 0))
     name = DeobfuscatedField("Name", lambda data: find_key_by_value(data, "Item_Coin"))
+    rarity = DeobfuscatedField("Rarity", lambda data: find_key_by_position(data, 2))
 
 
 class EquipmentTemplateTbDeobfuscator(BaseDeobfuscator):
