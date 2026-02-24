@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, ClassVar, Self
 
 import aiofiles
 import aiofiles.os
@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
 
 class BaseClient:
+    _FILE_CACHE: ClassVar[dict[str, dict]] = {}
+
     def __init__(self) -> None:
         self._session: aiohttp.ClientSession | None = None
         self._data_dir = Path(".hb_data")
@@ -80,6 +82,7 @@ class BaseClient:
                         await f.write(chunk)
 
             await aiofiles.os.replace(temp_path, file_path)
+            BaseClient._FILE_CACHE.pop(str(file_path.absolute()), None)
 
         except Exception as e:
             logger.error(f"Failed to download {url}: {e}")
@@ -102,13 +105,20 @@ class BaseClient:
                 tg.create_task(self._download_file(url, file_path))
 
     async def _read_json(self, file_path: PathLike) -> dict:
+        key = str(Path(file_path).absolute())  # noqa: ASYNC240
+        if key in BaseClient._FILE_CACHE:
+            return BaseClient._FILE_CACHE[key]
+
         try:
             async with aiofiles.open(file_path, "rb") as f:
                 content = await f.read()
-            return orjson.loads(content)
+            data = orjson.loads(content)
         except FileNotFoundError:
             logger.warning(f"File {file_path} not found. Run `await client.download()` first.")
             return {}
         except orjson.JSONDecodeError as e:
             logger.error(f"Failed to decode JSON from {file_path}: {e}")
             return {}
+
+        BaseClient._FILE_CACHE[key] = data
+        return data
