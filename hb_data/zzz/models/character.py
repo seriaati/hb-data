@@ -8,8 +8,10 @@ __all__ = ("Character",)
 class Character(BaseModel):
     id: int = Field(alias="ID")
     name: str = Field(alias="UIName")
+    full_name: str = Field(alias="FullName")
     element: ElementType = Field(alias="Elements")
     specialty: Specialty = Field(alias="AvatarSpecialty")
+    rarity: int = Field(alias="Rarity")
 
     @property
     def icon(self) -> str:

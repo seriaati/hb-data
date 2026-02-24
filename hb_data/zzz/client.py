@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from yarl import URL
 
 from hb_data.common.base_client import BaseClient
-from hb_data.common.dict_utils import merge_dicts_by_key
+from hb_data.common.dict_utils import merge_dicts_by_different_keys, merge_dicts_by_key
 from hb_data.zzz import deob, models
 
 if TYPE_CHECKING:
@@ -116,11 +116,17 @@ class ZZZClient(BaseClient):
 
         d_avatar_base = deob.AvatarBaseTemplateTbDeobfuscator(self._data["AvatarBaseTemplateTb"])
         avatar_base = d_avatar_base.deobfuscate()
+
         d_avatar_battle = deob.AvatarBattleTemplateTbDeobfuscator(
             self._data["AvatarBattleTemplateTb"]
         )
         avatar_battle = d_avatar_battle.deobfuscate()
+
+        d_item = deob.ItemTemplateTbDeobfuscator(self._data["ItemTemplateTb"])
+        item_data = d_item.deobfuscate()
+
         avatar_base = merge_dicts_by_key([avatar_base, avatar_battle], key="ID")
+        avatar_base = merge_dicts_by_different_keys({"ID": avatar_base, "ItemID": item_data})
 
         for item in avatar_base:
             try:
@@ -129,6 +135,7 @@ class ZZZClient(BaseClient):
                 continue
 
             character.name = self.translate(character.name, lang=lang)
+            character.full_name = self.translate(character.full_name, lang=lang)
             result.append(character)
 
         return result
