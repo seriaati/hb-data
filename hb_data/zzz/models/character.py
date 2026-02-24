@@ -11,6 +11,10 @@ class Character(BaseModel):
     element: ElementType = Field(alias="Elements")
     specialty: Specialty = Field(alias="AvatarSpecialty")
 
+    @property
+    def icon(self) -> str:
+        return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_icon.webp"
+
     @field_validator("element", mode="before")
     @classmethod
     def validate_element(cls, v: list[int]) -> int:
