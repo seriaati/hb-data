@@ -231,3 +231,11 @@ class ZZZClient(BaseClient):
             result.append(bangboo)
 
         return result
+
+    def get_rarity_map(self) -> dict[int, int]:
+        characters = self.get_characters()
+        bangboos = self.get_bangboos()
+        weapons = self.get_weapons()
+
+        items = characters + bangboos + weapons
+        return {item.id: item.rarity for item in items}
