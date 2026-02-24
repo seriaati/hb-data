@@ -53,9 +53,14 @@ class Character(BaseModel):
 
     @property
     def rarity_str(self) -> Literal["A", "S"]:
-        return ("C", "B", "A", "S")[self.rarity - 1]  # pyright: ignore[reportReturnType]
+        return ("C", "B", "A", "S")[self.rarity - 2]  # pyright: ignore[reportReturnType]
 
     @field_validator("element", mode="before")
     @classmethod
-    def validate_element(cls, v: list[int]) -> int:
+    def __validate_element(cls, v: list[int]) -> int:
         return v[0]
+
+    @field_validator("rarity", mode="after")
+    @classmethod
+    def __convert_rarity(cls, v: int) -> int:
+        return v + 1

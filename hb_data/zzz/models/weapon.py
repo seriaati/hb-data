@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from hb_data.zzz.models.enums import Specialty
 
@@ -19,4 +19,9 @@ class Weapon(BaseModel):
 
     @property
     def rarity_str(self) -> Literal["B", "A", "S"]:
-        return ("C", "B", "A", "S")[self.rarity - 1]  # pyright: ignore[reportReturnType]
+        return ("C", "B", "A", "S")[self.rarity - 2]  # pyright: ignore[reportReturnType]
+
+    @field_validator("rarity", mode="after")
+    @classmethod
+    def __convert_rarity(cls, v: int) -> int:
+        return v + 1
