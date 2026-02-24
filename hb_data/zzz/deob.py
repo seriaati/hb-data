@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from hb_data.common.base_deob import (
     BaseDeobfuscator,
     DeobfuscatedField,
