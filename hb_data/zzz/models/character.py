@@ -21,6 +21,18 @@ class Character(BaseModel):
         return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_icon.webp"
 
     @property
+    def phase_1_cinema_art(self) -> str:
+        return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_mindscape1_icon.webp"
+
+    @property
+    def phase_2_cinema_art(self) -> str:
+        return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_mindscape2_icon.webp"
+
+    @property
+    def phase_3_cinema_art(self) -> str:
+        return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_mindscape3_icon.webp"
+
+    @property
     def rarity_str(self) -> Literal["A", "S"]:
         return ("C", "B", "A", "S")[self.rarity - 1]  # pyright: ignore[reportReturnType]
 
