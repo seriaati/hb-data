@@ -217,6 +217,10 @@ class ZZZClient(BaseClient):
         d_buddy = deob.BuddyBaseTemplateTbDeobfuscator(self._data["BuddyBaseTemplateTb"])
         buddy_data = d_buddy.deobfuscate()
 
+        d_item = deob.ItemTemplateTbDeobfuscator(self._data["ItemTemplateTb"])
+        item_data = d_item.deobfuscate()
+        buddy_data = merge_dicts_by_different_keys({"ID": buddy_data, "ItemID": item_data})
+
         for item in buddy_data:
             try:
                 bangboo = models.Bangboo.model_validate(item)
