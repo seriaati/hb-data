@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 __all__ = ("Bangboo",)
@@ -9,7 +11,7 @@ class Bangboo(BaseModel):
     rarity: int = Field(alias="Rarity")
 
     @property
-    def rarity_str(self) -> str:
+    def rarity_str(self) -> Literal["B", "A", "S"]:
         return ("C", "B", "A", "S")[self.rarity - 2]  # pyright: ignore[reportReturnType]
 
     @property
