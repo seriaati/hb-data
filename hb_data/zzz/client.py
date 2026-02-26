@@ -33,9 +33,9 @@ class Language(StrEnum):
     VI = "VI"
 
 
-BASE_URL = URL("https://git.mero.moe/dimbreath/ZenlessData/raw/branch/master")
-TEXT_MAP_URL = BASE_URL / "TextMap"
-DATA_URL = BASE_URL / "FileCfg"
+UPSTREAM_BASE_URL = URL("https://git.mero.moe/dimbreath/ZenlessData/raw/branch/master")
+TEXT_MAP_URL = URL("https://raw.githubusercontent.com/seriaati/hb-data/refs/heads/main/textmaps/zzz")
+DATA_URL = UPSTREAM_BASE_URL / "FileCfg"
 DATA_FILE_NAMES = (
     "AvatarBaseTemplateTb",  # Characters
     "AvatarBattleTemplateTb",  # Character battle properties
@@ -97,6 +97,12 @@ class ZZZClient(BaseClient):
                 file_path = self._get_file_path(DATA_URL / f"{file_name}.json")
                 tg.create_task(self._read_data(file_path))
 
+    async def download_data_tables(self, *, force: bool = False) -> None:
+        await self._download_files(
+            [DATA_URL / f"{file_name}.json" for file_name in DATA_FILE_NAMES], force=force
+        )
+        await self.read_data()
+
     async def download(
         self, *, langs: Iterable[Language] | None = None, force: bool = False
     ) -> None:
@@ -105,11 +111,7 @@ class ZZZClient(BaseClient):
             force=force,
         )
         await self.read_text_maps(langs=langs)
-
-        await self._download_files(
-            [DATA_URL / f"{file_name}.json" for file_name in DATA_FILE_NAMES], force=force
-        )
-        await self.read_data()
+        await self.download_data_tables(force=force)
 
     def translate(self, text_map_hash: str, *, lang: Language) -> str:
         return self._text_maps.get(lang, {}).get(text_map_hash, text_map_hash)

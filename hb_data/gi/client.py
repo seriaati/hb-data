@@ -33,11 +33,9 @@ class Language(StrEnum):
     VI = "VI"
 
 
-HAS_TWO_PARTS = (Language.RU, Language.TH)
-
-BASE_URL = URL("https://gitlab.com/Dimbreath/AnimeGameData/-/raw/master")
-TEXT_MAP_URL = BASE_URL / "TextMap"
-DATA_URL = BASE_URL / "ExcelBinOutput"
+UPSTREAM_BASE_URL = URL("https://gitlab.com/Dimbreath/AnimeGameData/-/raw/master")
+TEXT_MAP_URL = URL("https://raw.githubusercontent.com/seriaati/hb-data/refs/heads/main/textmaps/gi")
+DATA_URL = UPSTREAM_BASE_URL / "ExcelBinOutput"
 DATA_FILE_NAMES = (
     "BeyondCostumeExcelConfigData",  # MW costumes
     "BydMaterialExcelConfigData",  # MW items
@@ -54,39 +52,20 @@ class GIClient(BaseClient):
     async def __aenter__(self) -> Self:
         await super().__aenter__()
         await self.download()
-        await self.read_text_maps()
-        await self.read_data()
         return self
 
     def _get_text_map_file_names(self, *, langs: Iterable[Language] | None = None) -> list[str]:
-        file_names = []
-        for lang in Language:
-            if langs is not None and lang not in langs:
-                continue
-            if lang in HAS_TWO_PARTS:
-                file_names.extend((f"TextMap{lang.value}_0.json", f"TextMap{lang.value}_1.json"))
-            else:
-                file_names.append(f"TextMap{lang.value}.json")
-        return file_names
+        return [
+            f"TextMap{lang.value}.json"
+            for lang in Language
+            if langs is None or lang in langs
+        ]
 
     async def _read_text_map(self, lang: Language) -> None:
         logger.debug(f"Reading text map for language: {lang}")
         file_name = f"TextMap{lang.value}.json"
         file_path = self._get_file_path(TEXT_MAP_URL / file_name)
-
-        if lang in HAS_TWO_PARTS:
-            file_name_part1 = f"TextMap{lang.value}_0.json"
-            file_path_part1 = self._get_file_path(TEXT_MAP_URL / file_name_part1)
-            text_map_part1 = await self._read_json(file_path_part1)
-
-            file_name_part2 = f"TextMap{lang.value}_1.json"
-            file_path_part2 = self._get_file_path(TEXT_MAP_URL / file_name_part2)
-            text_map_part2 = await self._read_json(file_path_part2)
-
-            merged_text_map = {**text_map_part1, **text_map_part2}
-            self._text_maps[lang] = merged_text_map
-        else:
-            self._text_maps[lang] = await self._read_json(file_path)
+        self._text_maps[lang] = await self._read_json(file_path)
 
     async def _read_data(self, file_path: Path) -> None:
         file_name = file_path.stem
@@ -105,6 +84,12 @@ class GIClient(BaseClient):
                 file_path = self._get_file_path(DATA_URL / f"{file_name}.json")
                 tg.create_task(self._read_data(file_path))
 
+    async def download_data_tables(self, *, force: bool = False) -> None:
+        await self._download_files(
+            [DATA_URL / f"{file_name}.json" for file_name in DATA_FILE_NAMES], force=force
+        )
+        await self.read_data()
+
     async def download(
         self, *, langs: Iterable[Language] | None = None, force: bool = False
     ) -> None:
@@ -113,11 +98,7 @@ class GIClient(BaseClient):
             force=force,
         )
         await self.read_text_maps(langs=langs)
-
-        await self._download_files(
-            [DATA_URL / f"{file_name}.json" for file_name in DATA_FILE_NAMES], force=force
-        )
-        await self.read_data()
+        await self.download_data_tables(force=force)
 
     def translate(self, text_map_hash: str, *, lang: Language) -> str:
         return self._text_maps.get(lang, {}).get(text_map_hash, text_map_hash)
