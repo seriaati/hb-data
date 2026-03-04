@@ -31,6 +31,8 @@ class Character(BaseModel):
     faction_name: str = Field(alias="CampName")
     skins: list[CharacterSkin] = Field(default_factory=list)
 
+    image: str = ""
+
     @property
     def icon(self) -> str:
         return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_icon.webp"
@@ -46,10 +48,6 @@ class Character(BaseModel):
     @property
     def phase_3_cinema_art(self) -> str:
         return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_mindscape3_icon.webp"
-
-    @property
-    def image(self) -> str:
-        return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_role_icon.webp"
 
     @property
     def rarity_str(self) -> Literal["A", "S"]:

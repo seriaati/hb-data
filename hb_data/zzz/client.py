@@ -34,7 +34,9 @@ class Language(StrEnum):
 
 
 UPSTREAM_BASE_URL = URL("https://git.mero.moe/dimbreath/ZenlessData/raw/branch/master")
-TEXT_MAP_URL = URL("https://raw.githubusercontent.com/seriaati/hb-data/refs/heads/main/textmaps/zzz")
+TEXT_MAP_URL = URL(
+    "https://raw.githubusercontent.com/seriaati/hb-data/refs/heads/main/textmaps/zzz"
+)
 DATA_URL = UPSTREAM_BASE_URL / "FileCfg"
 DATA_FILE_NAMES = (
     "AvatarBaseTemplateTb",  # Characters
@@ -154,6 +156,18 @@ class ZZZClient(BaseClient):
                 for skin in skins
                 if skin.character_id == character.id and "DefaultSkin" not in skin.tags
             ]
+            enka_image = next(
+                (
+                    skin.image
+                    for skin in skins
+                    if skin.character_id == character.id and "DefaultSkin" in skin.tags
+                ),
+                None,
+            )
+            character.image = (
+                enka_image
+                or f"https://zzz.honeyhunterworld.com/img/character/{character.id}-char_role_icon.webp"
+            )
             result.append(character)
 
         return result
