@@ -121,7 +121,7 @@ async def _fetch_gi_text_maps(session: aiohttp.ClientSession) -> dict[GILanguage
 async def _write_json(path: Path, data: dict) -> None:
     await asyncio.to_thread(path.parent.mkdir, parents=True, exist_ok=True)
     async with aiofiles.open(path, "wb") as f:
-        await f.write(orjson.dumps(data))
+        await f.write(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
 
 async def generate_zzz(output_dir: Path, *, force: bool) -> None:
