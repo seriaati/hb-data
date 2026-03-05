@@ -23,7 +23,7 @@ class CharacterSkin(BaseModel):
 
 class Character(BaseModel):
     id: int = Field(alias="ID")
-    name: str = Field(alias="UIName")
+    name: str = Field(alias="Name")
     full_name: str = Field(alias="FullName")
     element: ElementType = Field(alias="Elements")
     specialty: Specialty = Field(alias="AvatarSpecialty")

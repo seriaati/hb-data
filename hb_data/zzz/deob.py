@@ -8,8 +8,8 @@ from hb_data.common.base_deob import (
 
 class AvatarBaseTemplateTbDeobfuscator(BaseDeobfuscator):
     id = DeobfuscatedField("ID", lambda data: find_key_by_value(data, 1011))
-    ui_name = DeobfuscatedField(
-        "UIName", lambda data: find_key_by_value(data, "Avatar_Female_Size02_Anbi_En")
+    name = DeobfuscatedField(
+        "Name", lambda data: find_key_by_value(data, "Avatar_Female_Size02_Anbi")
     )
     full_name = DeobfuscatedField(
         "FullName", lambda data: find_key_by_value(data, "Avatar_Female_Size02_Anbi_FullName")

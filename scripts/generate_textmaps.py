@@ -32,10 +32,10 @@ def _extract_zzz_hashes(data: dict[str, Any]) -> set[str]:
     """Extract all text map hash values referenced by ZZZ get_* translation calls."""
     hashes: set[str] = set()
 
-    # get_characters: UIName, FullName from AvatarBaseTemplateTb
+    # get_characters: Name, FullName from AvatarBaseTemplateTb
     d = zzz_deob.AvatarBaseTemplateTbDeobfuscator(data["AvatarBaseTemplateTb"])
     for entry in d.deobfuscate():
-        for field in ("UIName", "FullName"):
+        for field in ("Name", "FullName"):
             if v := entry.get(field):
                 hashes.add(v)
 
