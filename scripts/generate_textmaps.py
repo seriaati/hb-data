@@ -3,9 +3,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import aiofiles
+import aiohttp
 import orjson
 from loguru import logger
 from yarl import URL
@@ -15,9 +16,6 @@ from hb_data.gi.client import Language as GILanguage
 from hb_data.zzz import deob as zzz_deob
 from hb_data.zzz.client import Language as ZZZLanguage
 from hb_data.zzz.client import ZZZClient
-
-if TYPE_CHECKING:
-    import aiohttp
 
 OUTPUT_DIR = Path("textmaps")
 
@@ -85,20 +83,32 @@ def _extract_gi_hashes(data: dict[str, Any]) -> set[str]:
 
 async def _fetch_json(session: aiohttp.ClientSession, url: URL) -> dict[str, str]:
     async with session.get(url) as resp:
+        resp.raise_for_status()
         return orjson.loads(await resp.read())
 
 
 async def _fetch_zzz_text_maps(session: aiohttp.ClientSession) -> dict[ZZZLanguage, dict[str, str]]:
-    def _url(lang: ZZZLanguage) -> URL:
-        file_name = (
-            "TextMapTemplateTb.json"
-            if lang is ZZZLanguage.CHS
-            else f"TextMap_{lang.value}TemplateTb.json"
-        )
-        return _ZZZ_UPSTREAM_TEXT_MAP_URL / file_name
-
     async def _fetch(lang: ZZZLanguage) -> tuple[ZZZLanguage, dict[str, str]]:
-        return lang, await _fetch_json(session, _url(lang))
+        def _get_url(overwrite: bool = False) -> URL:
+            if lang is ZZZLanguage.CHS:
+                stem = "TextMapOverwrite" if overwrite else "TextMap"
+            else:
+                stem = f"TextMap_{lang.value}Overwrite" if overwrite else f"TextMap_{lang.value}"
+            return _ZZZ_UPSTREAM_TEXT_MAP_URL / f"{stem}TemplateTb.json"
+
+        # Fetch the base text map
+        base_map = await _fetch_json(session, _get_url())
+
+        # Try to fetch and merge the overwrite text map
+        try:
+            overwrite_map = await _fetch_json(session, _get_url(overwrite=True))
+            base_map.update(overwrite_map)
+            logger.info(f"  ZZZ/{lang}: Merged {len(overwrite_map)} overwrite entries")
+        except aiohttp.ClientResponseError as e:
+            if e.status != 404:
+                raise
+
+        return lang, base_map
 
     return dict(await asyncio.gather(*[_fetch(lang) for lang in ZZZLanguage]))
 
