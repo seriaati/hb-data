@@ -55,11 +55,7 @@ class GIClient(BaseClient):
         return self
 
     def _get_text_map_file_names(self, *, langs: Iterable[Language] | None = None) -> list[str]:
-        return [
-            f"TextMap{lang.value}.json"
-            for lang in Language
-            if langs is None or lang in langs
-        ]
+        return [f"TextMap{lang.value}.json" for lang in Language if langs is None or lang in langs]
 
     async def _read_text_map(self, lang: Language) -> None:
         logger.debug(f"Reading text map for language: {lang}")
