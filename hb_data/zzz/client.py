@@ -197,6 +197,10 @@ class ZZZClient(BaseClient):
         d_equipment = deob.EquipmentTemplateTbDeobfuscator(self._data["EquipmentTemplateTb"])
         equipment_data = d_equipment.deobfuscate()
 
+        d_item = deob.ItemTemplateTbDeobfuscator(self._data["ItemTemplateTb"])
+        item_data = d_item.deobfuscate()
+        equipment_data = merge_dicts_by_key([equipment_data, item_data], key="ItemID")
+
         for item in equipment_data:
             try:
                 drive_disc = models.DriveDisc.model_validate(item)

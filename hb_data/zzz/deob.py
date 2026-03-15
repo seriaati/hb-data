@@ -51,6 +51,13 @@ class ItemTemplateTbDeobfuscator(BaseDeobfuscator):
     item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_position(data, 0))
     name = DeobfuscatedField("Name", lambda data: find_key_by_value(data, "Item_Coin"))
     rarity = DeobfuscatedField("Rarity", lambda data: find_key_by_position(data, 2))
+    icon = DeobfuscatedField(
+        "ItemIcon",
+        lambda data: find_key_by_value(
+            data,
+            "Assets/NapResources/UI/Sprite/A1DynamicLoad/Hollow/ItemIcon/UnPacker/IconFund.png",
+        ),
+    )
 
 
 class EquipmentTemplateTbDeobfuscator(BaseDeobfuscator):
@@ -72,6 +79,12 @@ class EquipmentSuitTemplateTbDeobfuscator(BaseDeobfuscator):
     )
     suit_story = DeobfuscatedField(
         "SuitStory", lambda data: find_key_by_value(data, "EquipmentSuit_31000_story")
+    )
+    suit_icon = DeobfuscatedField(
+        "SuitIcon",
+        lambda data: find_key_by_value(
+            data, "UI/Sprite/A1DynamicLoad/IconSuit/UnPacker/SuitWoodpeckerElectro.png"
+        ),
     )
 
 
