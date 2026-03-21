@@ -12,13 +12,16 @@ class CharacterSkin(BaseModel):
     character_id: int = Field(alias="AvatarID")
     name: str = Field(alias="SkinName")
     description: str = Field(alias="SkinDesc")
-    image: str = Field(alias="SkinImage")
+    image_name: str = Field(alias="SkinImage")
     tags: list[str] = Field(alias="SkinTags")
 
-    @field_validator("image", mode="after")
-    @classmethod
-    def __convert_image(cls, v: str) -> str:
-        return f"https://enka.network/ui/zzz/{v}.png"
+    @property
+    def image(self) -> str:
+        return f"https://enka.network/ui/zzz/{self.image_name}.png"
+
+    @property
+    def icon(self) -> str:
+        return f"https://static.nanoka.cc/assets/zzz/{self.image_name.replace('Role', 'RoleSelect')}.webp"
 
 
 class Character(BaseModel):
@@ -32,10 +35,7 @@ class Character(BaseModel):
     skins: list[CharacterSkin] = Field(default_factory=list)
 
     image: str = ""
-
-    @property
-    def icon(self) -> str:
-        return f"https://zzz.honeyhunterworld.com/img/character/{self.id}-char_icon.webp"
+    icon: str = ""
 
     @property
     def phase_1_cinema_art(self) -> str:

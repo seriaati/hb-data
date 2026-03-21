@@ -156,18 +156,24 @@ class ZZZClient(BaseClient):
                 for skin in skins
                 if skin.character_id == character.id and "DefaultSkin" not in skin.tags
             ]
-            enka_image = next(
+
+            default_skin = next(
                 (
-                    skin.image
+                    skin
                     for skin in skins
                     if skin.character_id == character.id and "DefaultSkin" in skin.tags
                 ),
                 None,
             )
-            character.image = (
-                enka_image
-                or f"https://zzz.honeyhunterworld.com/img/character/{character.id}-char_role_icon.webp"
-            )
+            if default_skin is not None:
+                character.image = default_skin.image
+                character.icon = default_skin.icon
+            else:
+                character.image = f"https://zzz.honeyhunterworld.com/img/character/{character.id}-char_role_icon.webp"
+                character.icon = (
+                    f"https://zzz.honeyhunterworld.com/img/character/{character.id}-char_icon.webp"
+                )
+
             result.append(character)
 
         return result
