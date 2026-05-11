@@ -39,15 +39,15 @@ class Character(BaseModel):
 
     @property
     def phase_1_cinema_art(self) -> str:
-        return f"https://enka.network/ui/zzz/Mindscape_{self.id}_1.png"
+        return f"https://static.nanoka.cc/assets/zzz/Mindscape_{self.id}_1.webp"
 
     @property
     def phase_2_cinema_art(self) -> str:
-        return f"https://enka.network/ui/zzz/Mindscape_{self.id}_2.png"
+        return f"https://static.nanoka.cc/assets/zzz/Mindscape_{self.id}_2.webp"
 
     @property
     def phase_3_cinema_art(self) -> str:
-        return f"https://enka.network/ui/zzz/Mindscape_{self.id}_3.png"
+        return f"https://static.nanoka.cc/assets/zzz/Mindscape_{self.id}_3.webp"
 
     @property
     def rarity_str(self) -> Literal["A", "S"]:
