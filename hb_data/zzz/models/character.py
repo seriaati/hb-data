@@ -39,14 +39,21 @@ class Character(BaseModel):
 
     @property
     def phase_1_cinema_art(self) -> str:
+        if self.id == 1551:
+            # Belle supremacy
+            return "https://static.nanoka.cc/assets/zzz/Mindscape_1551_Female_1.webp"
         return f"https://static.nanoka.cc/assets/zzz/Mindscape_{self.id}_1.webp"
 
     @property
     def phase_2_cinema_art(self) -> str:
+        if self.id == 1551:
+            return "https://static.nanoka.cc/assets/zzz/Mindscape_1551_Female_2.webp"
         return f"https://static.nanoka.cc/assets/zzz/Mindscape_{self.id}_2.webp"
 
     @property
     def phase_3_cinema_art(self) -> str:
+        if self.id == 1551:
+            return "https://static.nanoka.cc/assets/zzz/Mindscape_1551_Female_3.webp"
         return f"https://static.nanoka.cc/assets/zzz/Mindscape_{self.id}_3.webp"
 
     @property
