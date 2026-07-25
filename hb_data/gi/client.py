@@ -33,7 +33,7 @@ class Language(StrEnum):
     VI = "VI"
 
 
-UPSTREAM_BASE_URL = URL("https://gitlab.com/Dimbreath/AnimeGameData/-/raw/master")
+UPSTREAM_BASE_URL = URL("https://gitlab.com/Dimbreath/AnimeGameData2/-/raw/main")
 TEXT_MAP_URL = URL("https://raw.githubusercontent.com/seriaati/hb-data/refs/heads/main/textmaps/gi")
 DATA_URL = UPSTREAM_BASE_URL / "ExcelBinOutput"
 DATA_FILE_NAMES = (

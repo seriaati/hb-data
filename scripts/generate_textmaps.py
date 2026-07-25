@@ -22,7 +22,7 @@ OUTPUT_DIR = Path("textmaps")
 _ZZZ_UPSTREAM_TEXT_MAP_URL = URL(
     "https://git.mero.moe/dimbreath/ZenlessData/raw/branch/master/TextMap"
 )
-_GI_UPSTREAM_TEXT_MAP_URL = URL("https://gitlab.com/Dimbreath/AnimeGameData/-/raw/master/TextMap")
+_GI_UPSTREAM_TEXT_MAP_URL = URL("https://gitlab.com/Dimbreath/AnimeGameData2/-/raw/main/TextMap")
 _GI_HAS_TWO_PARTS = frozenset({GILanguage.RU, GILanguage.TH})
 
 
