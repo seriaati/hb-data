@@ -29,7 +29,7 @@ class BaseClient:
         await self.start()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: ANN001
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:  # ruff: ignore[missing-type-function-argument]
         await self.close()
 
     @property
@@ -95,7 +95,7 @@ class BaseClient:
                 tg.create_task(self._download_file(url, file_path))
 
     async def _read_json(self, file_path: PathLike) -> dict:
-        key = str(Path(file_path).absolute())  # noqa: ASYNC240
+        key = str(Path(file_path).absolute())  # ruff: ignore[blocking-path-method-in-async-function]
         if key in BaseClient._FILE_CACHE:
             return BaseClient._FILE_CACHE[key]
 

@@ -198,7 +198,7 @@ class ZZZClient(BaseClient):
 
         return result
 
-    def get_drive_discs(self, *, lang: Language = Language.EN) -> list[models.DriveDisc]:  # noqa: ARG002
+    def get_drive_discs(self, *, lang: Language = Language.EN) -> list[models.DriveDisc]:  # ruff: ignore[unused-method-argument]
         result: list[models.DriveDisc] = []
         d_equipment = deob.EquipmentTemplateTbDeobfuscator(self._data["EquipmentTemplateTb"])
         equipment_data = d_equipment.deobfuscate()

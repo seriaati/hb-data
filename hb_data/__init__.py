@@ -4,4 +4,4 @@ from . import gi, zzz
 from .gi import GIClient
 from .zzz import ZZZClient
 
-_logger.disable("hb_data")  # noqa: RUF067
+_logger.disable("hb_data")  # ruff: ignore[non-empty-init-module]
