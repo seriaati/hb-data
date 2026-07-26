@@ -13,6 +13,8 @@ from yarl import URL
 
 from hb_data.gi.client import GIClient
 from hb_data.gi.client import Language as GILanguage
+from hb_data.hsr.client import TRAILBLAZER_NAME_HASH, HSRClient
+from hb_data.hsr.client import Language as HSRLanguage
 from hb_data.zzz import deob as zzz_deob
 from hb_data.zzz.client import Language as ZZZLanguage
 from hb_data.zzz.client import ZZZClient
@@ -24,6 +26,10 @@ _ZZZ_UPSTREAM_TEXT_MAP_URL = URL(
 )
 _GI_UPSTREAM_TEXT_MAP_URL = URL("https://gitlab.com/Dimbreath/AnimeGameData2/-/raw/main/TextMap")
 _GI_HAS_TWO_PARTS = frozenset({GILanguage.RU, GILanguage.TH})
+_HSR_UPSTREAM_TEXT_MAP_URL = URL(
+    "https://gitlab.com/Dimbreath/turnbasedgamedata/-/raw/main/TextMap"
+)
+_HSR_HAS_TWO_PARTS = frozenset({HSRLanguage.KR, HSRLanguage.RU, HSRLanguage.TH})
 
 
 def _extract_zzz_hashes(data: dict[str, Any]) -> set[str]:
@@ -81,6 +87,32 @@ def _extract_gi_hashes(data: dict[str, Any]) -> set[str]:
     return hashes
 
 
+def _extract_hsr_hashes(data: dict[str, Any]) -> set[str]:
+    """Extract all text map hash values referenced by HSR get_* translation calls."""
+    hashes: set[str] = set()
+
+    # get_characters: AvatarName from AvatarConfig
+    for entry in data.get("AvatarConfig", []):
+        if v := entry.get("AvatarName", {}).get("Hash"):
+            hashes.add(str(v))
+
+    return hashes
+
+
+def _find_hsr_trailblazer_key(text_maps: dict[HSRLanguage, dict[str, str]]) -> str:
+    """Locate the upstream text map key for the Trailblazer's name by its EN value.
+
+    The key is re-keyed to the stable TRAILBLAZER_NAME_HASH sentinel when writing
+    stripped text maps, so an upstream re-key self-heals on the next generation run.
+    """
+    en_map = text_maps.get(HSRLanguage.EN, {})
+    key = next((k for k, v in en_map.items() if v == "Trailblazer"), None)
+    if key is None:
+        msg = 'HSR: no key with value "Trailblazer" found in the EN text map'
+        raise RuntimeError(msg)
+    return key
+
+
 async def _fetch_json(session: aiohttp.ClientSession, url: URL) -> dict[str, str]:
     async with session.get(url) as resp:
         resp.raise_for_status()
@@ -126,6 +158,21 @@ async def _fetch_gi_text_maps(session: aiohttp.ClientSession) -> dict[GILanguage
         )
 
     return dict(await asyncio.gather(*[_fetch(lang) for lang in GILanguage]))
+
+
+async def _fetch_hsr_text_maps(session: aiohttp.ClientSession) -> dict[HSRLanguage, dict[str, str]]:
+    async def _fetch(lang: HSRLanguage) -> tuple[HSRLanguage, dict[str, str]]:
+        if lang in _HSR_HAS_TWO_PARTS:
+            part0, part1 = await asyncio.gather(
+                _fetch_json(session, _HSR_UPSTREAM_TEXT_MAP_URL / f"TextMap{lang.value}_0.json"),
+                _fetch_json(session, _HSR_UPSTREAM_TEXT_MAP_URL / f"TextMap{lang.value}_1.json"),
+            )
+            return lang, {**part0, **part1}
+        return lang, await _fetch_json(
+            session, _HSR_UPSTREAM_TEXT_MAP_URL / f"TextMap{lang.value}.json"
+        )
+
+    return dict(await asyncio.gather(*[_fetch(lang) for lang in HSRLanguage]))
 
 
 async def _write_json(path: Path, data: dict) -> None:
@@ -188,12 +235,46 @@ async def generate_gi(output_dir: Path, *, force: bool) -> None:
         await client.close()
 
 
+async def generate_hsr(output_dir: Path, *, force: bool) -> None:
+    """Download HSR data tables and full upstream text maps, strip to needed hashes, write output.
+
+    KR, RU, and TH have split upstream files; we merge them here before stripping.
+    We always write a single file per language (TextMapKR.json, TextMapRU.json, TextMapTH.json).
+    """
+    client = HSRClient()
+    await client.start()
+    try:
+        await client.download_data_tables(force=force)
+        text_maps = await _fetch_hsr_text_maps(client.session)
+        hashes = _extract_hsr_hashes(client._data)
+        logger.info(f"HSR: {len(hashes)} unique hashes extracted")
+
+        trailblazer_key = _find_hsr_trailblazer_key(text_maps)
+        logger.info(f"HSR: Trailblazer name key located: {trailblazer_key}")
+
+        tasks = []
+        for lang in HSRLanguage:
+            full_map = text_maps.get(lang, {})
+            stripped = {k: v for k, v in full_map.items() if k in hashes}
+            if v := full_map.get(trailblazer_key):
+                stripped[TRAILBLAZER_NAME_HASH] = v
+            file_name = f"TextMap{lang.value}.json"
+            logger.info(f"  HSR/{lang}: {len(stripped)}/{len(full_map)} entries kept → {file_name}")
+            tasks.append(_write_json(output_dir / "hsr" / file_name, stripped))
+
+        await asyncio.gather(*tasks)
+    finally:
+        await client.close()
+
+
 async def main(*, force: bool) -> None:
     """Entry point: generate stripped text maps for all games."""
     output_dir = OUTPUT_DIR
     await asyncio.to_thread(output_dir.mkdir, parents=True, exist_ok=True)
     await asyncio.gather(
-        generate_zzz(output_dir, force=force), generate_gi(output_dir, force=force)
+        generate_zzz(output_dir, force=force),
+        generate_gi(output_dir, force=force),
+        generate_hsr(output_dir, force=force),
     )
 
 
