@@ -37,6 +37,9 @@ UPSTREAM_BASE_URL = URL("https://gitlab.com/Dimbreath/AnimeGameData2/-/raw/main"
 TEXT_MAP_URL = URL("https://raw.githubusercontent.com/seriaati/hb-data/refs/heads/main/textmaps/gi")
 DATA_URL = UPSTREAM_BASE_URL / "ExcelBinOutput"
 DATA_FILE_NAMES = (
+    "AvatarExcelConfigData",  # Characters
+    "AvatarSkillDepotExcelConfigData",  # Character skill depots (for element)
+    "AvatarSkillExcelConfigData",  # Character skills (for element)
     "BeyondCostumeExcelConfigData",  # MW costumes
     "BydMaterialExcelConfigData",  # MW items
 )
@@ -98,6 +101,33 @@ class GIClient(BaseClient):
 
     def translate(self, text_map_hash: str, *, lang: Language) -> str:
         return self._text_maps.get(lang, {}).get(text_map_hash, text_map_hash)
+
+    def get_characters(self, *, lang: Language = Language.EN) -> list[models.Character]:
+        result: list[models.Character] = []
+        data: list[dict[str, Any]] = self._data["AvatarExcelConfigData"]
+        skill_depots: dict[int, dict[str, Any]] = {
+            depot["id"]: depot for depot in self._data["AvatarSkillDepotExcelConfigData"]
+        }
+        skills: dict[int, dict[str, Any]] = {
+            skill["id"]: skill for skill in self._data["AvatarSkillExcelConfigData"]
+        }
+
+        for item in data:
+            if item.get("useType") != "AVATAR_FORMAL":
+                continue
+
+            character = models.Character.model_validate(item)
+            character.name = self.translate(character.name, lang=lang)
+
+            depot = skill_depots.get(item.get("skillDepotId", 0), {})
+            energy_skill = skills.get(depot.get("energySkill", 0), {})
+            element = energy_skill.get("costElemType")
+            if element is not None and element != "None":
+                character.element = models.Element(element)
+
+            result.append(character)
+
+        return result
 
     def get_mw_costumes(self, *, lang: Language = Language.EN) -> list[models.MWCostume]:
         result: list[models.MWCostume] = []
