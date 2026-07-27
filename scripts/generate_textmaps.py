@@ -73,6 +73,11 @@ def _extract_gi_hashes(data: dict[str, Any]) -> set[str]:
     """
     hashes: set[str] = set()
 
+    # get_characters: nameTextMapHash from AvatarExcelConfigData
+    for entry in data.get("AvatarExcelConfigData", []):
+        if v := entry.get("nameTextMapHash"):
+            hashes.add(str(v))
+
     # get_mw_costumes: nameTextMapHash from BeyondCostumeExcelConfigData
     for entry in data.get("BeyondCostumeExcelConfigData", []):
         if v := entry.get("nameTextMapHash"):
@@ -146,16 +151,24 @@ async def _fetch_zzz_text_maps(session: aiohttp.ClientSession) -> dict[ZZZLangua
 
 
 async def _fetch_gi_text_maps(session: aiohttp.ClientSession) -> dict[GILanguage, dict[str, str]]:
-    async def _fetch(lang: GILanguage) -> tuple[GILanguage, dict[str, str]]:
+    async def _fetch_one(lang: GILanguage, stem: str) -> dict[str, str]:
         if lang in _GI_HAS_TWO_PARTS:
             part0, part1 = await asyncio.gather(
-                _fetch_json(session, _GI_UPSTREAM_TEXT_MAP_URL / f"TextMap{lang.value}_0.json"),
-                _fetch_json(session, _GI_UPSTREAM_TEXT_MAP_URL / f"TextMap{lang.value}_1.json"),
+                _fetch_json(session, _GI_UPSTREAM_TEXT_MAP_URL / f"{stem}{lang.value}_0.json"),
+                _fetch_json(session, _GI_UPSTREAM_TEXT_MAP_URL / f"{stem}{lang.value}_1.json"),
             )
-            return lang, {**part0, **part1}
-        return lang, await _fetch_json(
-            session, _GI_UPSTREAM_TEXT_MAP_URL / f"TextMap{lang.value}.json"
+            return {**part0, **part1}
+        return await _fetch_json(session, _GI_UPSTREAM_TEXT_MAP_URL / f"{stem}{lang.value}.json")
+
+    async def _fetch(lang: GILanguage) -> tuple[GILanguage, dict[str, str]]:
+        # Upstream keys the two map families differently: character names (and other
+        # long-lived strings) resolve via classic hashes in TextMap_Medium*, while newer
+        # content like MW costumes/items resolves via the re-keyed hashes in TextMap*.
+        # Merge both so all get_* translation calls can look up their hashes.
+        medium, regular = await asyncio.gather(
+            _fetch_one(lang, "TextMap_Medium"), _fetch_one(lang, "TextMap")
         )
+        return lang, {**medium, **regular}
 
     return dict(await asyncio.gather(*[_fetch(lang) for lang in GILanguage]))
 
