@@ -43,6 +43,7 @@ DATA_FILE_NAMES = (
     "BeyondCostumeExcelConfigData",  # MW costumes
     "BydMaterialExcelConfigData",  # MW items
 )
+TRAVELER_ID = 10000005
 
 
 class GIClient(BaseClient):
@@ -128,6 +129,31 @@ class GIClient(BaseClient):
             result.append(character)
 
         return result
+
+    def get_traveler_elements(self) -> list[models.Element]:
+        """Get the elements the Traveler can currently switch to.
+
+        Derived from the Traveler's candidate skill depots: a depot with an energy
+        skill corresponds to a released element.
+        """
+        data: list[dict[str, Any]] = self._data["AvatarExcelConfigData"]
+        skill_depots: dict[int, dict[str, Any]] = {
+            depot["id"]: depot for depot in self._data["AvatarSkillDepotExcelConfigData"]
+        }
+        skills: dict[int, dict[str, Any]] = {
+            skill["id"]: skill for skill in self._data["AvatarSkillExcelConfigData"]
+        }
+
+        traveler = next(item for item in data if item["id"] == TRAVELER_ID)
+        elements: list[models.Element] = []
+        for depot_id in traveler.get("candSkillDepotIds", []):
+            depot = skill_depots.get(depot_id, {})
+            energy_skill = skills.get(depot.get("energySkill", 0), {})
+            element = energy_skill.get("costElemType")
+            if element is not None and element != "None":
+                elements.append(models.Element(element))
+
+        return elements
 
     def get_mw_costumes(self, *, lang: Language = Language.EN) -> list[models.MWCostume]:
         result: list[models.MWCostume] = []
