@@ -10,6 +10,7 @@ class ElementType(enum.IntEnum):
     ELECTRIC = 203
     ETHER = 205
     WIND = 204
+    LUMIFLUX = 300
 
 
 class Specialty(enum.IntEnum):
