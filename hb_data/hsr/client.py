@@ -36,7 +36,7 @@ TEXT_MAP_URL = URL(
     "https://raw.githubusercontent.com/seriaati/hb-data/refs/heads/main/textmaps/hsr"
 )
 DATA_URL = UPSTREAM_BASE_URL / "ExcelOutput"
-DATA_FILE_NAMES = ("AvatarConfig",)  # Characters
+DATA_FILE_NAMES = ("AvatarConfig", "AvatarConfigLD")  # Characters (LD = collab characters)
 
 # Trailblazer names resolve to the "{NICKNAME}" placeholder; this sentinel key
 # translates to "Trailblazer" in all languages and is used instead.
@@ -104,7 +104,7 @@ class HSRClient(BaseClient):
 
     def get_characters(self, *, lang: Language = Language.EN) -> list[models.Character]:
         result: list[models.Character] = []
-        data: list[dict[str, Any]] = self._data["AvatarConfig"]
+        data: list[dict[str, Any]] = self._data["AvatarConfig"] + self._data["AvatarConfigLD"]
 
         for item in data:
             character = models.Character.model_validate(item)

@@ -96,10 +96,11 @@ def _extract_hsr_hashes(data: dict[str, Any]) -> set[str]:
     """Extract all text map hash values referenced by HSR get_* translation calls."""
     hashes: set[str] = set()
 
-    # get_characters: AvatarName from AvatarConfig
-    for entry in data.get("AvatarConfig", []):
-        if v := entry.get("AvatarName", {}).get("Hash"):
-            hashes.add(str(v))
+    # get_characters: AvatarName from AvatarConfig (+ LD variant for collab characters)
+    for file_name in ("AvatarConfig", "AvatarConfigLD"):
+        for entry in data.get(file_name, []):
+            if v := entry.get("AvatarName", {}).get("Hash"):
+                hashes.add(str(v))
 
     return hashes
 
