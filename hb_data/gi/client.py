@@ -5,6 +5,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Self
 
 from loguru import logger
+from pydantic import ValidationError
 from yarl import URL
 
 from hb_data.common.base_client import BaseClient
@@ -159,7 +160,11 @@ class GIClient(BaseClient):
         result: list[models.MWCostume] = []
         data: list[dict[str, Any]] = self._data["BeyondCostumeExcelConfigData"]
         for item in data:
-            costume = models.MWCostume.model_validate(item)
+            try:
+                costume = models.MWCostume.model_validate(item)
+            except ValidationError as e:
+                logger.warning("Failed to validate MW costume: {}", e)
+                continue
             costume.name = self.translate(costume.name, lang=lang)
             result.append(costume)
         return result
@@ -168,7 +173,11 @@ class GIClient(BaseClient):
         result: list[models.MWItem] = []
         data: list[dict[str, Any]] = self._data["BydMaterialExcelConfigData"]
         for item in data:
-            mw_item = models.MWItem.model_validate(item)
+            try:
+                mw_item = models.MWItem.model_validate(item)
+            except ValidationError as e:
+                logger.warning("Failed to validate MW item: {}", e)
+                continue
             mw_item.name = self.translate(mw_item.name, lang=lang)
             mw_item.description = self.translate(mw_item.description, lang=lang)
             result.append(mw_item)
