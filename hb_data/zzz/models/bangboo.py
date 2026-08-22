@@ -10,13 +10,11 @@ class Bangboo(BaseModel):
     name: str = Field(alias="Name")
     rarity: int = Field(alias="Rarity")
 
+    icon: str = ""
+
     @property
     def rarity_str(self) -> Literal["B", "A", "S"]:
         return ("C", "B", "A", "S")[self.rarity - 2]  # pyright: ignore[reportReturnType]
-
-    @property
-    def icon(self) -> str:
-        return f"https://zzz.honeyhunterworld.com/img/item/{self.id}-item_icon.webp"
 
     @field_validator("rarity", mode="after")
     @classmethod

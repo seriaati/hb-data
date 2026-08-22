@@ -48,6 +48,7 @@ DATA_FILE_NAMES = (
     "EquipmentTemplateTb",  # Drive discs
     "EquipmentSuitTemplateTb",  # Drive disc sets
     "BuddyBaseTemplateTb",  # Bangboos
+    "GachaItemResourceTemplateTb",  # Character and bangboo images
 )
 
 
@@ -118,6 +119,17 @@ class ZZZClient(BaseClient):
     def translate(self, text_map_hash: str, *, lang: Language) -> str:
         return self._text_maps.get(lang, {}).get(text_map_hash, text_map_hash)
 
+    def _get_gacha_image_names(self) -> dict[int, str]:
+        d_gacha = deob.GachaItemResourceTemplateTbDeobfuscator(
+            self._data["GachaItemResourceTemplateTb"]
+        )
+        return {
+            entry["ItemID"]: entry["ImagePath"]
+            .rsplit("/", maxsplit=1)[-1]
+            .split(".", maxsplit=1)[0]
+            for entry in d_gacha.deobfuscate()
+        }
+
     def get_characters(self, *, lang: Language = Language.EN) -> list[models.Character]:
         result: list[models.Character] = []
 
@@ -139,8 +151,9 @@ class ZZZClient(BaseClient):
         avatar_base = merge_dicts_by_different_keys({"ID": avatar_base, "ItemID": item_data})
 
         d_skin = deob.AvatarSkinBaseTemplateTbDeobfuscator(self._data["AvatarSkinBaseTemplateTb"])
-        skin_data = d_skin.deobfuscate()
-        skins = [models.CharacterSkin.model_validate(skin) for skin in skin_data]
+        skins = [models.CharacterSkin.model_validate(skin) for skin in d_skin.deobfuscate()]
+
+        gacha_images = self._get_gacha_image_names()
 
         for item in avatar_base:
             try:
@@ -165,14 +178,14 @@ class ZZZClient(BaseClient):
                 ),
                 None,
             )
-            if default_skin is not None:
-                character.image = default_skin.image
-                character.icon = default_skin.icon
-            else:
-                character.image = f"https://zzz.honeyhunterworld.com/img/character/{character.id}-char_role_icon.webp"
-                character.icon = (
-                    f"https://zzz.honeyhunterworld.com/img/character/{character.id}-char_icon.webp"
-                )
+            image_name = (
+                default_skin.image_name
+                if default_skin is not None
+                else gacha_images.get(character.id)
+            )
+            if image_name is not None:
+                character.image = f"https://static.nanoka.cc/assets/zzz/{image_name}.webp"
+                character.icon = f"https://static.nanoka.cc/assets/zzz/{image_name.replace('Role', 'RoleSelect')}.webp"
 
             result.append(character)
 
@@ -247,6 +260,8 @@ class ZZZClient(BaseClient):
         item_data = d_item.deobfuscate()
         buddy_data = merge_dicts_by_different_keys({"ID": buddy_data, "ItemID": item_data})
 
+        gacha_images = self._get_gacha_image_names()
+
         for item in buddy_data:
             try:
                 bangboo = models.Bangboo.model_validate(item)
@@ -254,6 +269,9 @@ class ZZZClient(BaseClient):
                 continue
 
             bangboo.name = self.translate(bangboo.name, lang=lang)
+            image_name = gacha_images.get(bangboo.id)
+            if image_name is not None:
+                bangboo.icon = f"https://static.nanoka.cc/assets/zzz/{image_name}.webp"
             result.append(bangboo)
 
         return result

@@ -91,3 +91,8 @@ class EquipmentSuitTemplateTbDeobfuscator(BaseDeobfuscator):
 class BuddyBaseTemplateTbDeobfuscator(BaseDeobfuscator):
     id = DeobfuscatedField("ID", lambda data: find_key_by_value(data, 50001))
     name = DeobfuscatedField("Name", lambda data: find_key_by_value(data, "Bangboo_Name_en_50001"))
+
+
+class GachaItemResourceTemplateTbDeobfuscator(BaseDeobfuscator):
+    item_id = DeobfuscatedField("ItemID", lambda data: find_key_by_value(data, 1011))
+    image_path = DeobfuscatedField("ImagePath", lambda data: find_key_by_value(data, "IconRole01"))
