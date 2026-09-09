@@ -6,6 +6,7 @@ __all__ = ("MWCostume", "MWItem")
 class MWCostume(BaseModel):
     id: int = Field(alias="costumeId")
     name: str = Field(alias="nameTextMapHash", coerce_numbers_to_str=True)
+    icon: str | None = None
 
 
 class MWItem(BaseModel):

@@ -159,6 +159,22 @@ class GIClient(BaseClient):
     def get_mw_costumes(self, *, lang: Language = Language.EN) -> list[models.MWCostume]:
         result: list[models.MWCostume] = []
         data: list[dict[str, Any]] = self._data["BeyondCostumeExcelConfigData"]
+        materials: list[dict[str, Any]] = self._data["BydMaterialExcelConfigData"]
+
+        # The costume table only has icon hashes; the materials that grant a costume or a
+        # costume suit have the icon names. Suit pieces fall back to their suit's icon.
+        costume_icons: dict[int, str] = {}
+        suit_icons: dict[int, str] = {}
+        for material in materials:
+            for use in material.get("itemUse", []):
+                if use.get("useOp") == "BYD_MATERIAL_USE_GAIN_COSTUME":
+                    costume_icons[int(use["useParam"][0])] = material["icon"]
+                elif use.get("useOp") in {
+                    "BYD_MATERIAL_USE_GAIN_COSTUME_SUIT",
+                    "BYD_MATERIAL_USE_GAIN_TRIAL_COSTUME_SUIT",
+                }:
+                    suit_icons[int(use["useParam"][0])] = material["icon"]
+
         for item in data:
             try:
                 costume = models.MWCostume.model_validate(item)
@@ -166,6 +182,9 @@ class GIClient(BaseClient):
                 logger.warning("Failed to validate MW costume: {}", e)
                 continue
             costume.name = self.translate(costume.name, lang=lang)
+            icon = costume_icons.get(costume.id) or suit_icons.get(item.get("suitId", 0))
+            if icon is not None:
+                costume.icon = f"https://static.nanoka.cc/assets/gi/{icon}.webp"
             result.append(costume)
         return result
 
