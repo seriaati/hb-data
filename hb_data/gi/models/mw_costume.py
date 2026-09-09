@@ -19,4 +19,4 @@ class MWItem(BaseModel):
     @field_validator("icon", mode="after")
     @classmethod
     def __convert_icon(cls, v: str) -> str:
-        return f"https://starward-static.scighost.com/game-assets/genshin/beyond/{v}.png"
+        return f"https://static.nanoka.cc/assets/gi/{v}.webp"
