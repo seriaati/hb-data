@@ -20,3 +20,4 @@ class Specialty(enum.IntEnum):
     SUPPORT = 4
     DEFENSE = 5
     RUPTURE = 6
+    ARMORER = 7
