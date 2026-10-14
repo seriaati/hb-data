@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
     from yarl import URL
 
+_DOWNLOAD_RETRIES = 5
+
 
 class BaseClient:
     _FILE_CACHE: ClassVar[dict[str, dict]] = {}
@@ -51,6 +53,12 @@ class BaseClient:
     def _get_file_path(self, url: URL) -> Path:
         return self._data_dir / self._create_filename_from_url(url)
 
+    @staticmethod
+    async def _write_response(resp: aiohttp.ClientResponse, path: Path) -> None:
+        async with aiofiles.open(path, mode="wb") as f:
+            async for chunk in resp.content.iter_chunked(1024):
+                await f.write(chunk)
+
     async def _download_file(self, url: URL, file_path: PathLike) -> None:
         file_path = Path(file_path)
 
@@ -62,14 +70,19 @@ class BaseClient:
         try:
             logger.debug(f"Downloading {url} to {file_path}...")
 
-            async with self.session.get(url) as resp:
-                if resp.status != 200:
-                    logger.error(f"Failed to download {url}: HTTP {resp.status}")
-                    return
-
-                async with aiofiles.open(temp_path, mode="wb") as f:
-                    async for chunk in resp.content.iter_chunked(1024):
-                        await f.write(chunk)
+            # Upstream mirrors intermittently return 5xx (e.g. 522), so retry those with backoff.
+            for attempt in range(_DOWNLOAD_RETRIES):
+                async with self.session.get(url) as resp:
+                    if resp.status == 200:
+                        await self._write_response(resp, temp_path)
+                        break
+                    if resp.status < 500 or attempt == _DOWNLOAD_RETRIES - 1:
+                        logger.error(f"Failed to download {url}: HTTP {resp.status}")
+                        return
+                    logger.warning(
+                        f"{resp.status} for {url}, retrying ({attempt + 1}/{_DOWNLOAD_RETRIES})"
+                    )
+                await asyncio.sleep(2**attempt)
 
             await aiofiles.os.replace(temp_path, file_path)
             BaseClient._FILE_CACHE.pop(str(file_path.absolute()), None)
