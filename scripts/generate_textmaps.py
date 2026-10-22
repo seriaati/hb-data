@@ -86,6 +86,11 @@ def _extract_gi_hashes(data: dict[str, Any]) -> set[str]:
         if v := entry.get("nameTextMapHash"):
             hashes.add(str(v))
 
+    # get_characters: nameTextMapHash from AvatarCostumeExcelConfigData (non-default costumes)
+    for entry in data.get("AvatarCostumeExcelConfigData", []):
+        if not entry.get("isDefault") and (v := entry.get("nameTextMapHash")):
+            hashes.add(str(v))
+
     # get_mw_costumes: nameTextMapHash from BeyondCostumeExcelConfigData
     for entry in data.get("BeyondCostumeExcelConfigData", []):
         if v := entry.get("nameTextMapHash"):

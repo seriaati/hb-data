@@ -41,6 +41,7 @@ DATA_FILE_NAMES = (
     "AvatarExcelConfigData",  # Characters
     "AvatarSkillDepotExcelConfigData",  # Character skill depots (for element)
     "AvatarSkillExcelConfigData",  # Character skills (for element)
+    "AvatarCostumeExcelConfigData",  # Character costumes
     "BeyondCostumeExcelConfigData",  # MW costumes
     "BydMaterialExcelConfigData",  # MW items
 )
@@ -113,6 +114,11 @@ class GIClient(BaseClient):
         skills: dict[int, dict[str, Any]] = {
             skill["id"]: skill for skill in self._data["AvatarSkillExcelConfigData"]
         }
+        costumes = [
+            models.CharacterCostume.model_validate(costume)
+            for costume in self._data["AvatarCostumeExcelConfigData"]
+            if not costume.get("isDefault")
+        ]
 
         for item in data:
             if item.get("useType") != "AVATAR_FORMAL":
@@ -120,6 +126,11 @@ class GIClient(BaseClient):
 
             character = models.Character.model_validate(item)
             character.name = self.translate(character.name, lang=lang)
+            character.costumes = [
+                costume for costume in costumes if costume.character_id == character.id
+            ]
+            for costume in character.costumes:
+                costume.name = self.translate(costume.name, lang=lang)
 
             depot = skill_depots.get(item.get("skillDepotId", 0), {})
             energy_skill = skills.get(depot.get("energySkill", 0), {})
