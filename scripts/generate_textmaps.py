@@ -115,6 +115,11 @@ def _extract_hsr_hashes(data: dict[str, Any]) -> set[str]:
             if v := entry.get("AvatarName", {}).get("Hash"):
                 hashes.add(str(v))
 
+    # get_characters: ItemName from ItemConfigAvatarSkin (skin names)
+    for entry in data.get("ItemConfigAvatarSkin", []):
+        if v := entry.get("ItemName", {}).get("Hash"):
+            hashes.add(str(v))
+
     return hashes
 
 

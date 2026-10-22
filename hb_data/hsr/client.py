@@ -5,9 +5,11 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Self
 
 from loguru import logger
+from pydantic import ValidationError
 from yarl import URL
 
 from hb_data.common.base_client import BaseClient
+from hb_data.common.dict_utils import merge_dicts_by_key
 from hb_data.hsr import models
 
 if TYPE_CHECKING:
@@ -36,7 +38,12 @@ TEXT_MAP_URL = URL(
     "https://raw.githubusercontent.com/seriaati/hb-data/refs/heads/main/textmaps/hsr"
 )
 DATA_URL = UPSTREAM_BASE_URL / "ExcelOutput"
-DATA_FILE_NAMES = ("AvatarConfig", "AvatarConfigLD")  # Characters (LD = collab characters)
+DATA_FILE_NAMES = (
+    "AvatarConfig",  # Characters
+    "AvatarConfigLD",  # Collab characters
+    "AvatarSkin",  # Character skins
+    "ItemConfigAvatarSkin",  # Character skin items (for names)
+)
 
 # Trailblazer names resolve to the "{NICKNAME}" placeholder; this sentinel key
 # translates to "Trailblazer" in all languages and is used instead.
@@ -106,11 +113,23 @@ class HSRClient(BaseClient):
         result: list[models.Character] = []
         data: list[dict[str, Any]] = self._data["AvatarConfig"] + self._data["AvatarConfigLD"]
 
+        skins: list[models.CharacterSkin] = []
+        for item in merge_dicts_by_key(
+            [self._data["AvatarSkin"], self._data["ItemConfigAvatarSkin"]], key="ID"
+        ):
+            try:
+                skins.append(models.CharacterSkin.model_validate(item))
+            except ValidationError as e:
+                logger.warning("Failed to validate character skin: {}", e)
+
         for item in data:
             character = models.Character.model_validate(item)
             character.name = self.translate(character.name, lang=lang)
             if character.name == "{NICKNAME}":
                 character.name = self.translate(TRAILBLAZER_NAME_HASH, lang=lang)
+            character.skins = [skin for skin in skins if skin.character_id == character.id]
+            for skin in character.skins:
+                skin.name = self.translate(skin.name, lang=lang)
             result.append(character)
 
         return result

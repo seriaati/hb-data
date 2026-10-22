@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-__all__ = ("Character", "Element", "Path")
+__all__ = ("Character", "CharacterSkin", "Element", "Path")
 
 RARITY_MAP = {"CombatPowerAvatarRarityType4": 4, "CombatPowerAvatarRarityType5": 5}
 
@@ -30,6 +30,23 @@ class Path(StrEnum):
     ELATION = "Elation"
 
 
+class CharacterSkin(BaseModel):
+    id: int = Field(alias="ID")
+    character_id: int = Field(alias="AvatarID")
+    name: str = Field(alias="ItemName")
+    image: str = Field(alias="AvatarCutinFrontImgPath")
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def __extract_name_hash(cls, v: dict[str, Any]) -> str:
+        return str(v["Hash"])
+
+    @field_validator("image", mode="after")
+    @classmethod
+    def __convert_image(cls, v: str) -> str:
+        return f"https://enka.network/ui/hsr/{v}"
+
+
 class Character(BaseModel):
     id: int = Field(alias="AvatarID")
     name: str = Field(alias="AvatarName")
@@ -37,6 +54,7 @@ class Character(BaseModel):
     element: Element = Field(alias="DamageType")
     path: Path = Field(alias="AvatarBaseType")
     icon: str = Field(alias="AvatarSideIconPath")
+    skins: list[CharacterSkin] = Field(default_factory=list)
 
     @field_validator("name", mode="before")
     @classmethod
