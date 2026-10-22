@@ -169,6 +169,8 @@ class ZZZClient(BaseClient):
                 for skin in skins
                 if skin.character_id == character.id and "DefaultSkin" not in skin.tags
             ]
+            for skin in character.skins:
+                skin.name = self.translate(skin.name, lang=lang)
 
             default_skin = next(
                 (

@@ -45,6 +45,12 @@ def _extract_zzz_hashes(data: dict[str, Any]) -> set[str]:
             if v := entry.get(field):
                 hashes.add(v)
 
+    # get_characters: SkinName from AvatarSkinBaseTemplateTb
+    d = zzz_deob.AvatarSkinBaseTemplateTbDeobfuscator(data["AvatarSkinBaseTemplateTb"])
+    for entry in d.deobfuscate():
+        if v := entry.get("SkinName"):
+            hashes.add(v)
+
     # get_characters: CampName from AvatarUITemplateTb
     d = zzz_deob.AvatarUITemplateTbDeobfuscator(data["AvatarUITemplateTb"])
     for entry in d.deobfuscate():
