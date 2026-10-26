@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from yarl import URL
 
 from hb_data.common.base_client import BaseClient
-from hb_data.gi import models
+from hb_data.gi import deob, models
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -42,8 +42,14 @@ DATA_FILE_NAMES = (
     "AvatarSkillDepotExcelConfigData",  # Character skill depots (for element)
     "AvatarSkillExcelConfigData",  # Character skills (for element)
     "AvatarCostumeExcelConfigData",  # Character costumes
+    "BeyondCostumeDrawingExcelConfigData",  # MW costume catalogs
     "BeyondCostumeExcelConfigData",  # MW costumes
+    "BeyondEmojiExcelConfigData",  # MW emojis
     "BydMaterialExcelConfigData",  # MW items
+)
+# Only source of MW pose icon names; the data dump has icon hashes only
+STARWARD_MW_ITEMS_URL = URL(
+    "https://starward-static.scighost.com/game-assets/genshin/GenshinBeyondGachaInfo.json"
 )
 TRAVELER_ID = 10000005
 
@@ -85,10 +91,15 @@ class GIClient(BaseClient):
             for file_name in DATA_FILE_NAMES:
                 file_path = self._get_file_path(DATA_URL / f"{file_name}.json")
                 tg.create_task(self._read_data(file_path))
+            tg.create_task(self._read_data(self._get_file_path(STARWARD_MW_ITEMS_URL)))
 
     async def download_data_tables(self, *, force: bool = False) -> None:
         await self._download_files(
-            [DATA_URL / f"{file_name}.json" for file_name in DATA_FILE_NAMES], force=force
+            [
+                *(DATA_URL / f"{file_name}.json" for file_name in DATA_FILE_NAMES),
+                STARWARD_MW_ITEMS_URL,
+            ],
+            force=force,
         )
         await self.read_data()
 
@@ -167,13 +178,16 @@ class GIClient(BaseClient):
 
         return elements
 
-    def get_mw_costumes(self, *, lang: Language = Language.EN) -> list[models.MWCostume]:
-        result: list[models.MWCostume] = []
-        data: list[dict[str, Any]] = self._data["BeyondCostumeExcelConfigData"]
-        materials: list[dict[str, Any]] = self._data["BydMaterialExcelConfigData"]
+    def _get_mw_costume_icons(self) -> tuple[dict[int, str], dict[int, str]]:
+        """Get the icon names of MW costumes and costume suits.
 
-        # The costume table only has icon hashes; the materials that grant a costume or a
-        # costume suit have the icon names. Suit pieces fall back to their suit's icon.
+        The costume table only has icon hashes; the materials that grant a costume or a
+        costume suit have the icon names.
+
+        Returns:
+            Maps of costume ID to icon name and suit ID to icon name.
+        """
+        materials: list[dict[str, Any]] = self._data["BydMaterialExcelConfigData"]
         costume_icons: dict[int, str] = {}
         suit_icons: dict[int, str] = {}
         for material in materials:
@@ -185,6 +199,12 @@ class GIClient(BaseClient):
                     "BYD_MATERIAL_USE_GAIN_TRIAL_COSTUME_SUIT",
                 }:
                     suit_icons[int(use["useParam"][0])] = material["icon"]
+        return costume_icons, suit_icons
+
+    def get_mw_costumes(self, *, lang: Language = Language.EN) -> list[models.MWCostume]:
+        result: list[models.MWCostume] = []
+        data: list[dict[str, Any]] = self._data["BeyondCostumeExcelConfigData"]
+        costume_icons, suit_icons = self._get_mw_costume_icons()
 
         for item in data:
             try:
@@ -193,15 +213,70 @@ class GIClient(BaseClient):
                 logger.warning("Failed to validate MW costume: {}", e)
                 continue
             costume.name = self.translate(costume.name, lang=lang)
+            # Suit pieces fall back to their suit's icon
             icon = costume_icons.get(costume.id) or suit_icons.get(item.get("suitId", 0))
             if icon is not None:
                 costume.icon = f"https://static.nanoka.cc/assets/gi/{icon}.webp"
             result.append(costume)
         return result
 
+    def _get_mw_item_fallback_icons(self) -> dict[int, str]:
+        """Get the icon names of MW items that have no icon of their own.
+
+        Catalogs use the icon of the costume or suit they unlock, emojis derive theirs from
+        the emoji prefab name, and poses come from the Starward data.
+
+        Returns:
+            A map of item ID to icon name.
+        """
+        materials: list[dict[str, Any]] = self._data["BydMaterialExcelConfigData"]
+        costume_icons, suit_icons = self._get_mw_costume_icons()
+        costume_suits: dict[int, int] = {
+            costume["costumeId"]: costume.get("suitId", 0)
+            for costume in self._data["BeyondCostumeExcelConfigData"]
+        }
+        drawing_deob = deob.BeyondCostumeDrawingDeobfuscator(
+            {"data": self._data["BeyondCostumeDrawingExcelConfigData"]}
+        )
+        drawings: dict[int, list[int]] = {
+            drawing["id"]: drawing["costumeIds"] for drawing in drawing_deob.deobfuscate()
+        }
+        emoji_prefabs: dict[int, str] = {
+            emoji["id"]: emoji["prefabName"] for emoji in self._data["BeyondEmojiExcelConfigData"]
+        }
+        starward_icons: dict[int, str] = {
+            item["Id"]: URL(item["Icon"]).name.removesuffix(".png")
+            for item in self._data["GenshinBeyondGachaInfo"]
+            if item.get("Icon")
+        }
+
+        icons: dict[int, str] = {}
+        for material in materials:
+            for use in material.get("itemUse", []):
+                icon: str | None = None
+                if use.get("useOp") == "BYD_MATERIAL_USE_GAIN_COSTUME_DRAWING":
+                    # Suit catalogs unlock a girl and a boy suit; use the first one's icon
+                    costume_id = drawings.get(int(use["useParam"][0]), [0])[0]
+                    icon = (
+                        costume_icons.get(costume_id)
+                        or suit_icons.get(costume_id)
+                        or suit_icons.get(costume_suits.get(costume_id, 0))
+                    )
+                elif use.get("useOp") == "BYD_MATERIAL_USE_GAIN_EMOJI":
+                    prefab = emoji_prefabs.get(int(use["useParam"][0]))
+                    if prefab is not None:
+                        name = prefab.removeprefix("Beyd_Eff_UI_Emoji_").removeprefix("Common_")
+                        icon = f"UI_UGC_Emoji_{name}"
+                elif use.get("useOp") == "BYD_MATERIAL_USE_GAIN_POSE":
+                    icon = starward_icons.get(material["id"])
+                if icon:
+                    icons[material["id"]] = icon
+        return icons
+
     def get_mw_items(self, *, lang: Language = Language.EN) -> list[models.MWItem]:
         result: list[models.MWItem] = []
         data: list[dict[str, Any]] = self._data["BydMaterialExcelConfigData"]
+        fallback_icons = self._get_mw_item_fallback_icons()
         for item in data:
             try:
                 mw_item = models.MWItem.model_validate(item)
@@ -210,5 +285,7 @@ class GIClient(BaseClient):
                 continue
             mw_item.name = self.translate(mw_item.name, lang=lang)
             mw_item.description = self.translate(mw_item.description, lang=lang)
+            if mw_item.icon is None and (icon := fallback_icons.get(mw_item.id)) is not None:
+                mw_item.icon = f"https://static.nanoka.cc/assets/gi/{icon}.webp"
             result.append(mw_item)
         return result
