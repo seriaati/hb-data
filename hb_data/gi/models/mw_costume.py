@@ -14,9 +14,9 @@ class MWItem(BaseModel):
     name: str = Field(alias="nameTextMapHash", coerce_numbers_to_str=True)
     description: str = Field(alias="descTextMapHash", coerce_numbers_to_str=True)
     rarity: int = Field(alias="rankLevel")
-    icon: str
+    icon: str | None = None
 
     @field_validator("icon", mode="after")
     @classmethod
-    def __convert_icon(cls, v: str) -> str:
-        return f"https://static.nanoka.cc/assets/gi/{v}.webp"
+    def __convert_icon(cls, v: str | None) -> str | None:
+        return f"https://static.nanoka.cc/assets/gi/{v}.webp" if v else None
