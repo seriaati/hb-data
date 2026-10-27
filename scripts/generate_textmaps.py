@@ -32,6 +32,7 @@ _HSR_UPSTREAM_TEXT_MAP_URL = URL(
 _HSR_HAS_TWO_PARTS = frozenset({HSRLanguage.KR, HSRLanguage.RU, HSRLanguage.TH})
 _FETCH_SEMAPHORE = asyncio.Semaphore(4)
 _FETCH_RETRIES = 5
+_FETCH_MAX_DELAY = 60
 
 
 def _extract_zzz_hashes(data: dict[str, Any]) -> set[str]:
@@ -139,15 +140,18 @@ def _find_hsr_trailblazer_key(text_maps: dict[HSRLanguage, dict[str, str]]) -> s
 
 async def _fetch_json(session: aiohttp.ClientSession, url: URL) -> dict[str, str]:
     # Upstream (notably gitlab.com) returns 503 when too many large raw blobs are requested
-    # at once, so cap concurrency and retry server errors with backoff.
+    # at once and 429 when rate limited, so cap concurrency and retry those with backoff.
     async with _FETCH_SEMAPHORE:
         for attempt in range(_FETCH_RETRIES):
             async with session.get(url) as resp:
-                if resp.status < 500 or attempt == _FETCH_RETRIES - 1:
+                retryable = resp.status == 429 or resp.status >= 500
+                if not retryable or attempt == _FETCH_RETRIES - 1:
                     resp.raise_for_status()
                     return orjson.loads(await resp.read())
+                retry_after = resp.headers.get("Retry-After", "")
             logger.warning(f"{resp.status} for {url}, retrying ({attempt + 1}/{_FETCH_RETRIES})")
-            await asyncio.sleep(2**attempt)
+            delay = int(retry_after) if retry_after.isdigit() else 2**attempt
+            await asyncio.sleep(min(delay, _FETCH_MAX_DELAY))
     raise AssertionError  # unreachable
 
 
