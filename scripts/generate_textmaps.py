@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import aiofiles
 import aiohttp
@@ -33,6 +35,7 @@ _HSR_HAS_TWO_PARTS = frozenset({HSRLanguage.KR, HSRLanguage.RU, HSRLanguage.TH})
 _FETCH_SEMAPHORE = asyncio.Semaphore(4)
 _FETCH_RETRIES = 5
 _FETCH_MAX_DELAY = 60
+_GITLAB_TOKEN = os.environ.get("GITLAB_TOKEN")
 
 
 def _extract_zzz_hashes(data: dict[str, Any]) -> set[str]:
@@ -138,12 +141,29 @@ def _find_hsr_trailblazer_key(text_maps: dict[HSRLanguage, dict[str, str]]) -> s
     return key
 
 
+def _gitlab_api_url(url: URL) -> URL:
+    """Map a gitlab.com ``/-/raw/`` URL to the API raw file endpoint, which accepts tokens."""
+    project, _, rest = url.path.strip("/").partition("/-/raw/")
+    ref, _, file_path = rest.partition("/")
+    return URL(
+        f"https://gitlab.com/api/v4/projects/{quote(project, safe='')}"
+        f"/repository/files/{quote(file_path, safe='')}/raw?ref={ref}",
+        encoded=True,
+    )
+
+
 async def _fetch_json(session: aiohttp.ClientSession, url: URL) -> dict[str, str]:
     # Upstream (notably gitlab.com) returns 503 when too many large raw blobs are requested
     # at once and 429 when rate limited, so cap concurrency and retry those with backoff.
+    # Anonymous gitlab.com traffic has a low hourly per-IP limit that the GI text maps
+    # exceed, so authenticate via the API when a token is available.
+    headers = None
+    if _GITLAB_TOKEN and url.host == "gitlab.com":
+        url = _gitlab_api_url(url)
+        headers = {"PRIVATE-TOKEN": _GITLAB_TOKEN}
     async with _FETCH_SEMAPHORE:
         for attempt in range(_FETCH_RETRIES):
-            async with session.get(url) as resp:
+            async with session.get(url, headers=headers) as resp:
                 retryable = resp.status == 429 or resp.status >= 500
                 if not retryable or attempt == _FETCH_RETRIES - 1:
                     resp.raise_for_status()

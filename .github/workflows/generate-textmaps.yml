@@ -26,6 +26,8 @@ jobs:
 
       - name: Generate stripped text maps
         run: uv run python scripts/generate_textmaps.py --force
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
 
       - name: Commit and push if changed
         run: |
