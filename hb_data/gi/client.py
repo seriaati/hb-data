@@ -46,6 +46,10 @@ DATA_FILE_NAMES = (
     "BeyondCostumeExcelConfigData",  # MW costumes
     "BeyondEmojiExcelConfigData",  # MW emojis
     "BydMaterialExcelConfigData",  # MW items
+    "WeaponExcelConfigData",  # Weapons
+    "WeaponCodexExcelConfigData",  # Weapon archive (for filtering unreleased weapons)
+    "ReliquarySetExcelConfigData",  # Artifact sets
+    "EquipAffixExcelConfigData",  # Artifact set bonuses (for set names)
 )
 # Only source of MW pose icon names; the data dump has icon hashes only
 STARWARD_MW_ITEMS_URL = URL(
@@ -177,6 +181,39 @@ class GIClient(BaseClient):
                 elements.append(models.Element(element))
 
         return elements
+
+    def get_weapons(self, *, lang: Language = Language.EN) -> list[models.Weapon]:
+        result: list[models.Weapon] = []
+        # Only released weapons are shown in the Archive
+        codex_ids = {
+            codex["weaponId"]
+            for codex in self._data["WeaponCodexExcelConfigData"]
+            if not codex.get("isDisuse")
+        }
+        for item in self._data["WeaponExcelConfigData"]:
+            if item["id"] not in codex_ids:
+                continue
+            weapon = models.Weapon.model_validate(item)
+            weapon.name = self.translate(weapon.name, lang=lang)
+            result.append(weapon)
+        return result
+
+    def get_artifact_sets(self, *, lang: Language = Language.EN) -> list[models.ArtifactSet]:
+        result: list[models.ArtifactSet] = []
+        affixes: dict[int, dict[str, Any]] = {
+            affix["id"]: affix for affix in self._data["EquipAffixExcelConfigData"]
+        }
+        for item in self._data["ReliquarySetExcelConfigData"]:
+            # Unreleased sets are hidden from the inventory filter
+            if item.get("disableFilter") or "equipAffixId" not in item:
+                continue
+            affix = affixes[item["equipAffixId"]]
+            artifact_set = models.ArtifactSet.model_validate(
+                {**item, "nameTextMapHash": affix["nameTextMapHash"]}
+            )
+            artifact_set.name = self.translate(artifact_set.name, lang=lang)
+            result.append(artifact_set)
+        return result
 
     def _get_mw_costume_icons(self) -> tuple[dict[int, str], dict[int, str]]:
         """Get the icon names of MW costumes and costume suits.

@@ -106,6 +106,25 @@ def _extract_gi_hashes(data: dict[str, Any]) -> set[str]:
             if v := entry.get(field):
                 hashes.add(str(v))
 
+    # get_weapons: nameTextMapHash from WeaponExcelConfigData
+    hashes.update(
+        str(entry["nameTextMapHash"])
+        for entry in data.get("WeaponExcelConfigData", [])
+        if entry.get("nameTextMapHash")
+    )
+
+    # get_artifact_sets: nameTextMapHash from EquipAffixExcelConfigData (set bonus affixes)
+    set_affix_ids = {
+        entry["equipAffixId"]
+        for entry in data.get("ReliquarySetExcelConfigData", [])
+        if "equipAffixId" in entry
+    }
+    hashes.update(
+        str(entry["nameTextMapHash"])
+        for entry in data.get("EquipAffixExcelConfigData", [])
+        if entry.get("id") in set_affix_ids and entry.get("nameTextMapHash")
+    )
+
     return hashes
 
 
