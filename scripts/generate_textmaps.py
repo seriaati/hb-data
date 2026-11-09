@@ -124,6 +124,16 @@ def _extract_hsr_hashes(data: dict[str, Any]) -> set[str]:
         if v := entry.get("ItemName", {}).get("Hash"):
             hashes.add(str(v))
 
+    # get_light_cones: EquipmentName from EquipmentConfig
+    for entry in data.get("EquipmentConfig", []):
+        if v := entry.get("EquipmentName", {}).get("Hash"):
+            hashes.add(str(v))
+
+    # get_relic_sets: SetName from RelicSetConfig
+    for entry in data.get("RelicSetConfig", []):
+        if v := entry.get("SetName", {}).get("Hash"):
+            hashes.add(str(v))
+
     return hashes
 
 

@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from yarl import URL
 
 from hb_data.common.base_client import BaseClient
-from hb_data.common.dict_utils import merge_dicts_by_key
+from hb_data.common.dict_utils import merge_dicts_by_different_keys, merge_dicts_by_key
 from hb_data.hsr import models
 
 if TYPE_CHECKING:
@@ -43,6 +43,9 @@ DATA_FILE_NAMES = (
     "AvatarConfigLD",  # Collab characters
     "AvatarSkin",  # Character skins
     "ItemConfigAvatarSkin",  # Character skin items (for names)
+    "EquipmentConfig",  # Light cones
+    "ItemConfigEquipment",  # Light cone items (for icons)
+    "RelicSetConfig",  # Relic sets
 )
 
 # Trailblazer names resolve to the "{NICKNAME}" placeholder; this sentinel key
@@ -132,4 +135,27 @@ class HSRClient(BaseClient):
                 skin.name = self.translate(skin.name, lang=lang)
             result.append(character)
 
+        return result
+
+    def get_light_cones(self, *, lang: Language = Language.EN) -> list[models.LightCone]:
+        result: list[models.LightCone] = []
+        data = merge_dicts_by_different_keys(
+            {"ID": self._data["ItemConfigEquipment"], "EquipmentID": self._data["EquipmentConfig"]}
+        )
+        for item in data:
+            if not item.get("Release"):
+                continue
+            light_cone = models.LightCone.model_validate(item)
+            light_cone.name = self.translate(light_cone.name, lang=lang)
+            result.append(light_cone)
+        return result
+
+    def get_relic_sets(self, *, lang: Language = Language.EN) -> list[models.RelicSet]:
+        result: list[models.RelicSet] = []
+        for item in self._data["RelicSetConfig"]:
+            if not item.get("Release"):
+                continue
+            relic_set = models.RelicSet.model_validate(item)
+            relic_set.name = self.translate(relic_set.name, lang=lang)
+            result.append(relic_set)
         return result
